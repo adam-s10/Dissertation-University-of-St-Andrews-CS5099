@@ -6,11 +6,11 @@ _**CS5099 Dissertation in Computer Science**_
 
 **MSc in Artificial Intelligence**
 
-_Academic Year 2025–2026
+_Academic Year 2025–2026_
 
-Adam Steinmetz
+_Adam Steinmetz_
 
-250030052_
+_250030052_
 
 **Supervisor**
 
