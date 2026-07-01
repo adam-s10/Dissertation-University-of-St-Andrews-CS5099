@@ -1,6 +1,4 @@
 pandas
-os
-shutil
 dotenv
 huggingface_hub
 torch
