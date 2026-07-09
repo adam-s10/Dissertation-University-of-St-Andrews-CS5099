@@ -19,12 +19,25 @@ models = {
             'tokenizer_config.json',
             'vocab.json'
         ]
+    },
+    'qwen_ft': {
+        'repo_id': 'kulia-moon/Lily-Qwen1.5-0.5B',
+        'files': [
+            'added_tokens.json',
+            'config.json',
+            'generation_config.json',
+            'model.safetensors',
+            'special_tokens_map.json',
+            'tokenizer.json',
+            'tokenizer_config.json',
+            'vocab.json'
+        ]
     }
 }
 
-for file in models['qwen']['files']:  # make reusable and turn into a function
+for file in models['qwen_ft']['files']:  # make reusable and turn into a function
     download_location = hf_hub_download(
-        repo_id=models['qwen']['repo_id'],
+        repo_id=models['qwen_ft']['repo_id'],
         filename=file,
         token=hf_token
     )
