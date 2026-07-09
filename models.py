@@ -7,28 +7,29 @@ import os
 load_dotenv()
 hf_token = os.getenv('HF_TOKEN')
 
-# TODO: where we will load models for the algorithm
-
 model_info = {
-    'qwen': 'Qwen/Qwen1.5-0.5B'
+    'qwen': 'Qwen/Qwen1.5-0.5B',
+    'qwen_ft': 'kulia-moon/Lily-Qwen1.5-0.5B'
+    # todo: add additional models
 }
-
-# model = AutoModelForCausalLM.from_pretrained(model_paths['qwen'])  # enable trust_remote_code for safetensors
-# tokenizer = AutoTokenizer.from_pretrained(model_paths['qwen'])
 
 def load_model(model_name:str):
     """
     Loads model weights and tokenizer from local HuggingFace directory.
+
     :param model_name: name of model to load
-    :return: model, tokenizer
+    :return: model, tokenizer, device
     """
 
     model_repo_id = model_info[model_name]
     model = AutoModelForCausalLM.from_pretrained(model_repo_id)
     tokenizer = AutoTokenizer.from_pretrained(model_repo_id)
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'  # get device: GPU if available else CPU
     print(f'Running on {device}')
-    model.eval()
-    model.to(device)
+    model.eval()  # set model in evaluation mode
+    model.to(device)  # run model on device
+    tokenizer.padding_side = 'left'
+    if tokenizer.pad_token is None:  # todo: check if all models decoder only, if so leave this otherwise will need to dynamically switch
+        tokenizer.pad_token = tokenizer.eos_token
 
-    return model, tokenizer
+    return model, tokenizer, device
