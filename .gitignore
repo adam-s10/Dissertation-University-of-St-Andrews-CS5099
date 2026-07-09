@@ -1,2 +1,6 @@
 # Ignore environmental variables and API Keys
 .env
+# ignore dataset libraries used to generate data
+Raw Datasets
+Sampled Datasets
+Generated Datasets
