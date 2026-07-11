@@ -9,7 +9,10 @@ hf_token = os.getenv('HF_TOKEN')
 
 model_info = {
     'qwen': 'Qwen/Qwen1.5-0.5B',
-    'qwen_ft': 'kulia-moon/Lily-Qwen1.5-0.5B'
+    'qwen_ft': 'kulia-moon/Lily-Qwen1.5-0.5B',
+    'bitnet': 'microsoft/bitnet-b1.58-2B-4T',  # this will not run locally todo: remove...
+    'bitnet_2b': 'microsoft/bitnet-b1.58-2B-4T-bf16',
+    'llama': 'meta-llama/Llama-3.2-1B-Instruct'
     # todo: add additional models
 }
 
@@ -27,7 +30,7 @@ def load_model(model_name:str):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # get device: GPU if available else CPU
     print(f'Running on {device}')
     model.eval()  # set model in evaluation mode
-    model.to(device)  # run model on device
+    model = model.to(device)  # run model on device
     tokenizer.padding_side = 'left'
     if tokenizer.pad_token is None:  # todo: check if all models decoder only, if so leave this otherwise will need to dynamically switch
         tokenizer.pad_token = tokenizer.eos_token
