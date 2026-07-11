@@ -1,9 +1,11 @@
 # imports
 import numpy as np
 import os
+import argparse
 from models import load_model
 import torch
 import pandas as pd
+
 
 # TODO: implement sampling algorithm using smallest chosen model as the baseline. Build step-by-step; see the forest for the trees...
 # TODO: convert this to a class if we have time?
@@ -139,7 +141,19 @@ def calculate_conditional_probability_curvature(
 
 if __name__ == '__main__':
 
-    model_name = 'qwen'
+    parser = argparse.ArgumentParser(description='Run Fast-DetectGPT')
+    parser.add_argument('-w', '--white-box', type=bool, default=True, required=False)
+    parser.add_argument(
+        '-d',
+        '--dataset',
+        type=str,
+        default='qwen_ft_xsum_generated.parquet',
+        required=False
+    )
+    parser.add_argument('-m', '--model', type=str, default='qwen', required=False)
+    args = parser.parse_args()
+
+    model_name = 'qwen_ft'
     model, tokenizer, device = load_model(model_name)
     DEVICE = device
     # passage = 'The quick brown fox jumps over the lazy dog.'
@@ -147,11 +161,12 @@ if __name__ == '__main__':
     passages = data.document.to_list()
     import time
     from datetime import timedelta
-    THRESHOLD = .8
+    THRESHOLD = -0.1984
     results = {
         'threshold': THRESHOLD,
     }
     predictions = []
+    curvature = []
     start = time.time()
     for i in range(len(passages)):
         x_tilde, log_p, token_ids, sample_probs = sample_passage(data.document.iloc[i], model, tokenizer)
@@ -167,18 +182,19 @@ if __name__ == '__main__':
 
         discrepancy = calculate_conditional_probability_curvature(con_log_prob, mu_tilde, sigma_tilde)
         print(f'Conditional Probability Curvature: {discrepancy:.8f}')
-
-        predictions.append(1 if discrepancy > np.log(THRESHOLD) else 0)
+        curvature.append(discrepancy)
+        predictions.append(0 if discrepancy < THRESHOLD else 1)
     end = time.time()
     print(f"For loop took {timedelta(seconds=end - start)}")
 
 
     # TODO: improve code quality from here
     results['predictions'] = predictions
+    results['curvature'] = curvature
     df = pd.DataFrame(results)
     df = pd.concat([df, data['is_machine']], axis=1)
     
     results_files_dir = 'Results Files'
     os.makedirs(results_files_dir, exist_ok=True)
-    df.to_csv(f'{results_files_dir}/{model_name}_xsum_results.csv', index=False)
+    df.to_csv(f'{results_files_dir}/{model_name}_xsum_results2.csv', index=False)
     # todo: to here
