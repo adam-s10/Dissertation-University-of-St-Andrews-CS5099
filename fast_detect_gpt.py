@@ -5,6 +5,9 @@ import argparse
 from models import load_model
 import torch
 import pandas as pd
+from datetime import timedelta
+import time
+import sys
 
 
 # TODO: implement sampling algorithm using smallest chosen model as the baseline. Build step-by-step; see the forest for the trees...
@@ -139,62 +142,192 @@ def calculate_conditional_probability_curvature(
     return discrepancy.item()
 
 
+def fast_detect_gpt(
+        sample_model_name:str,
+        data:pd.DataFrame,
+        score_model_name:str | None=None
+) -> (list[float] | tuple[list[float], list[int]]):
+    
+    sampling_model, sampling_tokenizer, device = load_model(sample_model_name)
+    DEVICE = device  # this may not be needed if we run only one function
+
+
+    if score_model_name:  # load different models in black-box
+        scoring_model, scoring_tokenizer, _ = load_model(score_model_name)
+    else:  # load the same models in white-box or as a choice
+        scoring_model, scoring_tokenizer = sampling_model, sampling_tokenizer
+
+    curvature = []
+    
+    total_epochs = len(data)
+    epoch = 1
+    for i in range(total_epochs):
+        epoch_start = time.time()
+        print(f'------ Starting Epoch {epoch} of {total_epochs} ------')
+        passage = data['document'].iloc[i]
+        
+        # ------ Sample Passage ------
+        # tokenized text and attention mask as 1 x n tensors where n is the sequence length and 1 represents the batch size
+        sample_inputs = sampling_tokenizer(passage, return_tensors='pt').to(DEVICE)
+        with torch.no_grad():
+            outputs = sampling_model(**sample_inputs)
+            
+            # 1 x n x m tensor where 1 is the batch size, n is the sequence length, and m is the size of the vocabulary
+            logits = outputs.logits
+
+        sample_shifted_logits = logits[:, :-1, :]  # shift the tokens by 1 as we can't check predictions past token n-1
+        probs = torch.softmax(sample_shifted_logits, dim=-1)  # returns the normalized probability distribution of each token appearing. Size 1 x n-1 x m
+
+        sampled_token_ids = torch.multinomial(  # samples 1 token per position from the probability distribution
+            probs.squeeze(0),
+            num_samples=1,
+        ).squeeze(-1)  # returns tensor of length n-1
+
+        log_probs = torch.log_softmax(sample_shifted_logits, dim=-1)  # log probability distribution of each token appearing. Size 1 x n-1 x m
+
+        sampled_log_probs = (  # gathers the log probabilities of the tokens sampled
+            log_probs.squeeze(0)
+            .gather(dim=-1, index=sampled_token_ids.unsqueeze(-1))
+            .squeeze(-1)
+        )  # returns tensor of length n-1
+        log_p = sampled_log_probs.sum().item()  # sum of log probabilities
+        print(f'Log P: {log_p}')
+
+        # this code block is not needed was just a visual during implementation
+        input_ids = sample_inputs['input_ids']
+        first_token = input_ids[:, :1]  # can't predict first token so just draw it from input
+        rest_of_tokens = sampled_token_ids.unsqueeze(0)  # 1 x n-1 tensor
+        x_tilde_ids = torch.cat(tensors=[first_token, rest_of_tokens], dim=-1)  # concatenates the first token to sampled tokens producing 1 x n tensor
+        x_tilde = sampling_tokenizer.decode(x_tilde_ids[0], skip_special_tokens=True)  # decodes token ids into words
+        
+        
+        # ------ Score Passage ------
+        score_inputs = scoring_tokenizer(passage, return_tensors='pt').to(DEVICE)
+        with torch.no_grad():
+            outputs = scoring_model(**score_inputs)
+            logits = outputs.logits
+
+        score_shifted_logits = logits[:, :-1, :]
+
+        # log probability distribution of each token appearing in scoring model. Size 1 x n-1 x m
+        score_log_probs = torch.log_softmax(score_shifted_logits, dim=-1)
+
+        # returns the normalized probability distribution of each token appearing in sampling model. Size 1 x n-1 x m
+        sample_probs = torch.softmax(score_shifted_logits, dim=-1)
+
+        conditional_log_likelihood = (  # calculates the conditional probability of the scoring model observing each token in the input at each position
+            score_log_probs
+            .gather(dim=-1, index=score_inputs['input_ids'][:, 1:].unsqueeze(-1))
+            .squeeze(-1)
+        )  # returns a 1 x n-1 size tensor
+
+        mu_tilde = (sample_probs * score_log_probs).sum(dim=-1)
+        sigma_tilde = torch.sqrt(
+            (sample_probs * torch.square(score_log_probs)).sum(dim=-1) - torch.square(mu_tilde)
+        )
+        
+        # ------ Calculate Discrepancy ------
+        discrepancy = ((conditional_log_likelihood.sum(dim=-1) - mu_tilde.sum(dim=-1)) / sigma_tilde.sum(dim=-1)).mean()
+        d_proba = discrepancy.item()
+
+        epoch_end = time.time()
+        print(f'------ Finished Epoch {epoch}. Took {timedelta(seconds=epoch_end - epoch_start)} ------')
+        curvature.append(d_proba)
+
+    return curvature
+
+
 if __name__ == '__main__':
+    
+    # todo: add runtime error for when white box and scoring model passed
+    # todo: add runtime error
 
     parser = argparse.ArgumentParser(description='Run Fast-DetectGPT')
-    parser.add_argument('-w', '--white-box', type=bool, default=True, required=False)
-    parser.add_argument(
-        '-d',
-        '--dataset',
-        type=str,
-        default='qwen_ft_xsum_generated.parquet',
-        required=False
-    )
-    parser.add_argument('-m', '--model', type=str, default='qwen', required=False)
+    # parser.add_argument('--white-box', type=bool, required=True)
+    parser.add_argument('--sampling-model', type=str, required=True)
+    parser.add_argument('--dataset', type=str , required=True)
+    parser.add_argument('--generation-model', type=str, required=True)
+    parser.add_argument('--save-file', type=str, required=True)
+    parser.add_argument('--scoring-model', type=str, default=None, required=False)
+    parser.add_argument('--dataset-dir', type=str, default='Generated Datasets', required=False)
+    parser.add_argument('--save-dir', type=str, default='Results Files', required=False)
+
     args = parser.parse_args()
 
-    model_name = 'qwen_ft'
-    model, tokenizer, device = load_model(model_name)
-    DEVICE = device
-    # passage = 'The quick brown fox jumps over the lazy dog.'
-    data = pd.read_parquet('Generated Datasets/qwen_ft_xsum_generated.parquet')
-    passages = data.document.to_list()
-    import time
-    from datetime import timedelta
-    THRESHOLD = -0.1984
-    results = {
-        'threshold': THRESHOLD,
-    }
-    predictions = []
-    curvature = []
-    start = time.time()
-    for i in range(len(passages)):
-        x_tilde, log_p, token_ids, sample_probs = sample_passage(data.document.iloc[i], model, tokenizer)
-        print(f'Original: {data.document.iloc[i]}')
-        print(f'Alternative: {x_tilde}')
-        print(f'Token ids: {token_ids}')
-        print(f'Log p: {log_p:.8f}')
+    if args.scoring_model and (args.scoring_model == args.sampling_model):
+        input_ = ''
+        while input_ != 'y' or input_ != 'n':
+            input_ = input(
+                f'Warning: you will load two of the same models as sample and score ({args.scoring_model}), '
+                f'this is a waste of compute. Passing just --sample-model would use the same models as both '
+                f'sample and score but only load the weights once, would you like to proceed? [y/n]'
+            ).lower()
+            if input_ == 'n':
+                sys.exit('------ Program terminated by user ------')
+            if input_ == 'y':
+                break
 
-        con_log_prob, mu_tilde, sigma_tilde = score_passage(data.document.iloc[i], model, tokenizer, sampling_model_probabilities=sample_probs)
-        print(f'Conditional Log Probability: {con_log_prob}')
-        print(f'Mu tilde: {mu_tilde}')
-        print(f'Sigma tilde: {sigma_tilde}')
-
-        discrepancy = calculate_conditional_probability_curvature(con_log_prob, mu_tilde, sigma_tilde)
-        print(f'Conditional Probability Curvature: {discrepancy:.8f}')
-        curvature.append(discrepancy)
-        predictions.append(0 if discrepancy < THRESHOLD else 1)
-    end = time.time()
-    print(f"For loop took {timedelta(seconds=end - start)}")
-
-
-    # TODO: improve code quality from here
-    results['predictions'] = predictions
-    results['curvature'] = curvature
-    df = pd.DataFrame(results)
-    df = pd.concat([df, data['is_machine']], axis=1)
+    dataset = pd.read_parquet(f'{args.dataset_dir}/{args.dataset}')
+    # todo: handle thresholding in another script to avoid two runs
     
-    results_files_dir = 'Results Files'
-    os.makedirs(results_files_dir, exist_ok=True)
-    df.to_csv(f'{results_files_dir}/{model_name}_xsum_results2.csv', index=False)
-    # todo: to here
+    if not args.scoring_model:
+        fast_results = fast_detect_gpt(args.sampling_model, dataset)
+    else:
+        fast_results = fast_detect_gpt(args.sampling_model, dataset, score_model_name=args.scoring_model)
+    
+    results = pd.DataFrame({
+        'generating_model': args.generation_model,
+        'sampling_model': args.sampling_model,
+        'scoring_model': args.scoring_model if args.scoring_model else args.sampling_model,
+        'curvatures': fast_results
+    })
+    df = pd.concat([results, dataset['is_machine']], axis=1)
+
+    os.makedirs(args.save_dir, exist_ok=True)
+    df.to_csv(f'{args.save_dir}/{args.save_file}')
+
+
+
+    # model_name = 'qwen_ft'
+    # model, tokenizer, device = load_model(model_name)
+    # DEVICE = device
+    # # passage = 'The quick brown fox jumps over the lazy dog.'
+    # data = pd.read_parquet('Generated Datasets/qwen_ft_xsum_generated.parquet')
+    # passages = data.document.to_list()
+    # THRESHOLD = -0.1984
+    # results = {
+    #     'threshold': THRESHOLD,
+    # }
+    # predictions = []
+    # curvature = []
+    # start = time.time()
+    # for i in range(len(passages)):
+    #     x_tilde, log_p, token_ids, sample_probs = sample_passage(data.document.iloc[i], model, tokenizer)
+    #     print(f'Original: {data.document.iloc[i]}')
+    #     print(f'Alternative: {x_tilde}')
+    #     print(f'Token ids: {token_ids}')
+    #     print(f'Log p: {log_p:.8f}')
+    #
+    #     con_log_prob, mu_tilde, sigma_tilde = score_passage(data.document.iloc[i], model, tokenizer, sampling_model_probabilities=sample_probs)
+    #     print(f'Conditional Log Probability: {con_log_prob}')
+    #     print(f'Mu tilde: {mu_tilde}')
+    #     print(f'Sigma tilde: {sigma_tilde}')
+    #
+    #     discrepancy = calculate_conditional_probability_curvature(con_log_prob, mu_tilde, sigma_tilde)
+    #     print(f'Conditional Probability Curvature: {discrepancy:.8f}')
+    #     curvature.append(discrepancy)
+    #     predictions.append(0 if discrepancy < THRESHOLD else 1)
+    # end = time.time()
+    # print(f"For loop took {timedelta(seconds=end - start)}")
+    #
+    #
+    # # TODO: improve code quality from here
+    # results['predictions'] = predictions
+    # results['curvature'] = curvature
+    # df = pd.DataFrame(results)
+    # df = pd.concat([df, data['is_machine']], axis=1)
+    #
+    # results_files_dir = 'Results Files'
+    # os.makedirs(results_files_dir, exist_ok=True)
+    # df.to_csv(f'{results_files_dir}/{model_name}_xsum_results2.csv', index=False)
+    # # todo: to here
