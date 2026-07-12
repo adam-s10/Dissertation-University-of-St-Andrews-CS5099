@@ -128,14 +128,12 @@ def generate_positive_samples(model_name:str, dataset_name:str, batch_size:int=2
     combined_df.to_parquet()
 
     os.makedirs(generated_datasets_dir, exist_ok=True)
-    combined_df.to_parquet(
-        path=f'{generated_datasets_dir}/{model_name}_{dataset_name}_generated.parquet', index=False
-    )
+    combined_df.to_parquet(path=f'{generated_datasets_dir}/{model_name}_{dataset_name}_generated.parquet', index=False)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset sampler and generator')
-    parser.add_argument('--mode', type=str, default='sample', required=True)
+    parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--model', type=str, default='qwen', required=False)
     parser.add_argument('--dataset', type=str, default='xsum',  required=False)
     parser.add_argument('--remove', type=bool, default=False, required=False)
