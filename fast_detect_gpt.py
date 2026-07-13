@@ -173,8 +173,8 @@ def fast_detect_gpt(
             outputs = sampling_model(**sample_inputs)
             
             # 1 x n x m tensor where 1 is the batch size, n is the sequence length, and m is the size of the vocabulary
-            logits = outputs.logits
-
+            logits = outputs.logits.float()  # convert to 32 bit precision
+        # todo: can talk about how bf16 resulted in underflow so needed to use 32 bit precision
         sample_shifted_logits = logits[:, :-1, :]  # shift the tokens by 1 as we can't check predictions past token n-1
         probs = torch.softmax(sample_shifted_logits, dim=-1)  # returns the normalized probability distribution of each token appearing. Size 1 x n-1 x m
 
@@ -191,7 +191,6 @@ def fast_detect_gpt(
             .squeeze(-1)
         )  # returns tensor of length n-1
         log_p = sampled_log_probs.sum().item()  # sum of log probabilities
-        print(f'Log P: {log_p}')
 
         # this code block is not needed was just a visual during implementation
         input_ids = sample_inputs['input_ids']
@@ -205,7 +204,7 @@ def fast_detect_gpt(
         score_inputs = scoring_tokenizer(passage, return_tensors='pt').to(DEVICE)
         with torch.no_grad():
             outputs = scoring_model(**score_inputs)
-            logits = outputs.logits
+            logits = outputs.logits.float()  # convert to 32 bit precision
 
         score_shifted_logits = logits[:, :-1, :]
 
@@ -224,15 +223,35 @@ def fast_detect_gpt(
         mu_tilde = (sample_probs * score_log_probs).sum(dim=-1)
         sigma_tilde = torch.sqrt(
             (sample_probs * torch.square(score_log_probs)).sum(dim=-1) - torch.square(mu_tilde)
-        )
+        )  # todo: producing a nan maybe square root of negative number?
         
         # ------ Calculate Discrepancy ------
         discrepancy = ((conditional_log_likelihood.sum(dim=-1) - mu_tilde.sum(dim=-1)) / sigma_tilde.sum(dim=-1)).mean()
         d_proba = discrepancy.item()
+        curvature.append(d_proba)
 
+        print(f'Log P: {log_p:.4f}')
+        # print(f'Conditional Log Likelihood {conditional_log_likelihood}')
+        # print(f'Mu tilde: {mu_tilde}')
+        # print(f'Sigma tilde: {sigma_tilde}')  # todo: nan inside sigma tilde
+        print(f'Discrepancy: {d_proba:.4f}')
+        print()
+        index = torch.nonzero(torch.isnan(sigma_tilde)).flatten()
+        print(f'NaN at index {index}')
+        print(f'Sample Probabilities {torch.index_select(sample_probs, dim=-1, index=index)}')
+        print(f'Score Log Probabilities {torch.index_select(score_log_probs, dim=-1, index=index)}')
+        print(f'Mu Tilde {torch.index_select(mu_tilde, dim=-1, index=index)}')
+        print(f'Sigma Tilde {torch.index_select(sigma_tilde, dim=-1, index=index)}')
+        # print(torch.index_select(conditional_log_likelihood, index=index))
+        # print(torch.index_select(mu_tilde, index=index))
+        # print(torch.index_select(sigma_tilde, index=index))
         epoch_end = time.time()
         print(f'------ Finished Epoch {epoch}. Took {timedelta(seconds=epoch_end - epoch_start)} ------')
-        curvature.append(d_proba)
+        print()
+        if epoch % 100 == 0:
+            print('------ Processed 100 rows, clearing KV Cache as precaution against OOM Error ------')
+            torch.cuda.empty_cache()
+        epoch += 1
 
     return curvature
 
@@ -269,12 +288,15 @@ if __name__ == '__main__':
 
     dataset = pd.read_parquet(f'{args.dataset_dir}/{args.dataset}')
     # todo: handle thresholding in another script to avoid two runs
-    
+
+    fast_start = time.time()
     if not args.scoring_model:
         fast_results = fast_detect_gpt(args.sampling_model, dataset)
     else:
         fast_results = fast_detect_gpt(args.sampling_model, dataset, score_model_name=args.scoring_model)
-    
+
+    fast_end = time.time()
+    print(f'###### Fast-DetectGPT took {timedelta(seconds=fast_end-fast_start)} ######')
     results = pd.DataFrame({
         'generating_model': args.generation_model,
         'sampling_model': args.sampling_model,
@@ -284,7 +306,7 @@ if __name__ == '__main__':
     df = pd.concat([results, dataset['is_machine']], axis=1)
 
     os.makedirs(args.save_dir, exist_ok=True)
-    df.to_csv(f'{args.save_dir}/{args.save_file}')
+    df.to_csv(f'{args.save_dir}/{args.save_file}', index=False)
 
 
 
