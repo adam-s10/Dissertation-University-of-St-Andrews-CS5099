@@ -1,12 +1,11 @@
-import pandas as pd
-from huggingface_hub import hf_hub_download
-
-from os import getenv
+import os
+import argparse
 from dotenv import load_dotenv
 
+from huggingface_hub import hf_hub_download
+
 load_dotenv()
-hf_token = getenv('HF_TOKEN')
-download_location = '/Raw Datasets'
+hf_token = os.getenv('HF_TOKEN')
 REPO_TYPE_DATASET = 'dataset'
 
 datasets = {
@@ -40,7 +39,8 @@ datasets = {
     }
 }
 
-def download_data():
+def download_data(download_location: str = 'Raw Datasets'):
+    os.makedirs(download_location, exist_ok=True)
     for dataset in datasets.keys():
         for file in dataset['files']:
             hf_hub_download(
@@ -62,4 +62,12 @@ def download_xsum():
             local_dir='/Users/adam/PycharmProjects/Dissertation-University-of-St-Andrews-CS5099/Raw Datasets/xsum'
         )
 
-download_xsum()
+# download_xsum()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Download data with Hugging Face cli.')
+    parser.add_argument('--download-dir', type=str, default='Raw Datasets', required=False)
+
+    args = parser.parse_args()
+
+    download_data(args.download_dir)
