@@ -6,3 +6,4 @@ transformers
 pyarrow  # needed backend for pandas parquet file support
 numpy
 accelerate
+scikit-learn
