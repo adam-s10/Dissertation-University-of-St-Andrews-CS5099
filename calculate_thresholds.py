@@ -8,7 +8,7 @@ from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_
 import argparse
 
 
-def calculate_thresholds(data:pd.DataFrame) -> float:
+def calculate_thresholds(data: pd.DataFrame) -> float:
 
     machine_scores = data.query('is_machine==1')['curvature']
     human_scores = data.query('is_machine==0')['curvature']
