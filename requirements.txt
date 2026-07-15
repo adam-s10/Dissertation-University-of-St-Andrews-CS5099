@@ -1,5 +1,4 @@
 pandas
-dotenv
 huggingface_hub
 torch
 transformers
@@ -7,3 +6,4 @@ pyarrow  # needed backend for pandas parquet file support
 numpy
 accelerate
 scikit-learn
+python-dotenv
