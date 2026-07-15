@@ -10,10 +10,9 @@ hf_token = os.getenv('HF_TOKEN')
 model_info = {
     'qwen': 'Qwen/Qwen1.5-0.5B',
     'qwen_ft': 'kulia-moon/Lily-Qwen1.5-0.5B',
-    'bitnet': 'microsoft/bitnet-b1.58-2B-4T',  # this will not run locally todo: remove...
-    'bitnet_2b': 'microsoft/bitnet-b1.58-2B-4T-bf16',
-    'llama': 'meta-llama/Llama-3.2-1B-Instruct'
-    # todo: add additional models
+    'bitnet': 'microsoft/bitnet-b1.58-2B-4T-bf16',
+    'llama': 'meta-llama/Llama-3.2-1B-Instruct',
+    'stablelm': 'stabilityai/stablelm-3b-4e1t'
 }
 
 def load_model(model_name:str):
@@ -28,7 +27,8 @@ def load_model(model_name:str):
     model = AutoModelForCausalLM.from_pretrained(model_repo_id)
     tokenizer = AutoTokenizer.from_pretrained(model_repo_id)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # get device: GPU if available else CPU
-    print(f'Running on {device}')
+    print(f'------ Running on {device} ------')
+
     model.eval()  # set model in evaluation mode
     model = model.to(device)  # run model on device
     tokenizer.padding_side = 'left'
