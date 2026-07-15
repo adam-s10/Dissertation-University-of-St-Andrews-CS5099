@@ -41,28 +41,16 @@ datasets = {
 
 def download_data(download_location: str = 'Raw Datasets'):
     os.makedirs(download_location, exist_ok=True)
-    for dataset in datasets.keys():
+    for dataset_name in datasets.keys():
+        dataset = datasets[dataset_name]
         for file in dataset['files']:
             hf_hub_download(
                 repo_id=dataset['repo_id'],
                 repo_type=REPO_TYPE_DATASET,
                 filename=file,
                 token=hf_token,
-                local_dir=f'{download_location}/{dataset}'
+                local_dir=f'{download_location}/{dataset_name}'
             )
-
-def download_xsum():
-    xsum_dataset = datasets['xsum']
-    for file in xsum_dataset['files']:
-        hf_hub_download(
-            repo_id=xsum_dataset['repo_id'],
-            repo_type=REPO_TYPE_DATASET,
-            filename=file,
-            token=hf_token,
-            local_dir='/Users/adam/PycharmProjects/Dissertation-University-of-St-Andrews-CS5099/Raw Datasets/xsum'
-        )
-
-# download_xsum()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download data with Hugging Face cli.')
