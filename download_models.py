@@ -1,12 +1,11 @@
-from huggingface_hub import hf_hub_download
 from dotenv import load_dotenv
 import os
 import argparse
 
+from huggingface_hub import hf_hub_download
+
 load_dotenv()
 hf_token = os.getenv('HF_TOKEN')
-
-# todo: make this reusable...
 
 models = {
     'qwen': {
@@ -40,13 +39,13 @@ models = {
             'config.json',
             'generation_config.json',
             'model.safetensors',
-            'special_tokens_map',
+            'special_tokens_map.json',
             'tokenizer.json',
             'tokenizer_config.json'
         ]
 
     },
-    'bitnet_2b': {
+    'bitnet': {
         'repo_id': 'microsoft/bitnet-b1.58-2B-4T-bf16',
         'files': [
             'config.json',
@@ -57,18 +56,41 @@ models = {
             'tokenizer_config.json'
         ]
     },
-    'bitnet': {  # this will not run locally, todo: remove...
-        'repo_id': 'microsoft/bitnet-b1.58-2B-4T',
+    'stablelm': {
+        'repo_id': 'stabilityai/stablelm-3b-4e1t',
         'files': [
             'config.json',
+            'configuration_stablelm.py',
             'generation_config.json',
             'model.safetensors',
+            'modeling_stablelm.py',
             'special_tokens_map.json',
             'tokenizer.json',
             'tokenizer_config.json'
         ]
     }
 }
+
+def download_all_models():
+    for key in models.keys():
+        for file in models[key]['files']:
+            download_location = hf_hub_download(
+                repo_id=models[key]['repo_id'],
+                filename=file,
+                token=hf_token
+            )
+            print(f'File downloaded to: {download_location}')
+
+
+def download_individual_model(model_name: str):
+    for file in models[model_name]['files']:
+        download_location = hf_hub_download(
+            repo_id=models[args.model]['repo_id'],
+            filename=file,
+            token=hf_token
+        )
+        print(f'File downloaded to: {download_location}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download Hugging Face Models')
@@ -82,29 +104,7 @@ if __name__ == '__main__':
         )
 
     if args.all:
-        for key in models.keys():
-            for file in models[key]['files']:
-                download_location = hf_hub_download(
-                    repo_id=models[key]['repo_id'],
-                    filename=file,
-                    token=hf_token
-                )
-
+        download_all_models()
 
     if args.model:
-        for file in models[args.model]['files']:
-            download_location = hf_hub_download(
-                repo_id=models[args.model]['repo_id'],
-                filename=file,
-                token=hf_token
-            )
-            print(f'File downloaded to: {download_location}')
-
-
-# for file in models['qwen_ft']['files']:  # make reusable and turn into a function
-#     download_location = hf_hub_download(
-#         repo_id=models['qwen_ft']['repo_id'],
-#         filename=file,
-#         token=hf_token
-#     )
-#     print(f'File downloaded to: {download_location}')  # /Users/adam/.cache/huggingface/hub/models--Qwen--Qwen1.5-0.5B
+        download_individual_model(args.model)
