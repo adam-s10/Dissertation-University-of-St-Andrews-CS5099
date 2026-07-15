@@ -20,8 +20,12 @@ def generate_sampled_datasets(remove_raw_datasets: bool = False, number_of_sampl
 
     dataset_dict = {}
     for dataset in os.listdir(raw_datasets_dir):
+        print(f'------- Starting sampling for file {dataset} ------')
         # combine train, validation, test parquet files for all datasets
-        data_dir = f'{raw_datasets_dir}/{dataset}/data'
+        individual_dataset_root = f'{raw_datasets_dir}/{dataset}'  # Raw Datasets/"Dataset Name" e.g. Raw Datasets/wmt16
+        individual_dataset_data_dir = [dirs for dirs in os.listdir(individual_dataset_root) if dirs != '.cache'][0]  # Raw Datasets/"Dataset Name"/"Data for dataset dir" e.g. Raw Datasets/wmt16/de-en
+
+        data_dir = f'{individual_dataset_root}/{individual_dataset_data_dir}'
         dataset_dict[dataset] = os.listdir(data_dir)  # gets a list of all files in the data directory
         dfs = [pd.read_parquet(f'{data_dir}/{file}') for file in dataset_dict[dataset]]
         combined_df = pd.concat(dfs)
