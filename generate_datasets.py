@@ -164,7 +164,7 @@ def generate_samples_deprecated(
 #     os.makedirs(generated_datasets_dir, exist_ok=True)
 #     combined_df.to_parquet(path=f'{generated_datasets_dir}/{model_name}_{file}_generated.parquet', index=False)
 
-def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: int = 20) -> None:
+def generate_samples(model, tokenizer, device: str, model_name: str, file: str, dataset_dir: str, batch_size: int = 20) -> None:
     """
     Adds positive examples of machine-generated content to for the datasets using the first 30 tokens of
     each row for xsum or the question along with the context for the others.
@@ -172,21 +172,23 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
     *Tokens can be calculated differently across models, some models first 30 tokens may have more or less characters
     when compared against others.*
 
-    :param model_name: model
-    :param file_: file
+    :param model: loaded model
+    :param tokenizer: loaded tokenizer
+    :param device: device to load tensors to
+    :param model_name: model name
+    :param file: file
     :param dataset_dir: directory where file located
     :param batch_size: batch size
+
     :return: None
     """
 
-    model, tokenizer, device = load_model(model_name)
-
-    data = pd.read_parquet(f'{dataset_dir}/{file_}')
+    data = pd.read_parquet(f'{dataset_dir}/{file}')
     # handled in process_datasets.py
     # data['is_machine'] = 0
     # data = data[['document', 'is_machine']]
     
-    if 'xsum' in file_:
+    if 'xsum' in file:
         passages = data['document'].to_list()
     else:
         passages = data['context'].to_list()
@@ -199,7 +201,7 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
     ).to(device)
     
     # extract the first 30 tokens of each passage
-    if 'xsum' in file_:
+    if 'xsum' in file:
         generation_tokens = []
         for ids, mask in zip(tokens['input_ids'], tokens['attention_mask']):
             real_tokens = ids[mask.bool()][:30].to(device)
@@ -209,7 +211,7 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
                     (30-len(real_tokens),),
                     tokenizer.pad_token_id
                 ).to(device)
-                real_tokens = torch.cat([real_tokens, padding]).to(device)
+                real_tokens = torch.cat([padding, real_tokens]).to(device)
 
             generation_tokens.append(real_tokens)
     
@@ -218,17 +220,16 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
 
     outputs = []
     epoch = 1
-    total_epochs = (len(data) / batch_size).__ceil__()  # can't have a partial batch so we round up
 
     for i in range(0, len(data), batch_size):
 
-        if 'xsum' in file_:
+        if 'xsum' in file:
             # extract the tokens for dataset rows according to batch size
             batch = generation_tokens[i:i+batch_size]
             input_ids = torch.stack(batch).to(device)
             # creates boolean tensor for if a token at index i is the pad token then converts to model.generate expected dtype
             attention_mask = (input_ids != tokenizer.pad_token_id).long().to(device)
-            q_and_a_dataset = None
+            q_and_a_dataset = False
 
         else:
             input_ids = tokens['input_ids'][i:i+batch_size].to(device)
@@ -260,9 +261,9 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
         )
         outputs.extend(batch_outputs)
         torch.cuda.empty_cache()
-        epoch += 1
 
-        print(f'------ Finished epoch {epoch} of {total_epochs} for file {file_} ------')
+        print(f'------ Finished epoch {epoch} for file {file} ------')
+        epoch += 1
 
     df = pd.DataFrame({
         'document': outputs,
@@ -274,7 +275,7 @@ def generate_samples(model_name: str, file_: str, dataset_dir: str, batch_size: 
     combined_df['generation_model'] = model_name
     
     os.makedirs(generated_datasets_dir, exist_ok=True)
-    combined_df.to_parquet(path=f'{generated_datasets_dir}/{model_name}_{file_}_generated.parquet', index=False)
+    combined_df.to_parquet(path=f'{generated_datasets_dir}/{model_name}_{file.split('_sampled')[0]}_generated.parquet', index=False)
 
 
 if __name__ == '__main__':
@@ -286,11 +287,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     files = os.listdir(args.dataset_dir)
-    print(f'------ Found {', '.join(files)} in provided directory {args.dataset_dir} ------')
+    print(f'\n------ Found {', '.join(files)} in provided directory "{args.dataset_dir}" ------\n')
 
+    model, tokenizer, device = load_model(args.model)
     start = time.time()
     for file in files:
-        print(f'------ Starting generation for file {file} ------')
-        generate_samples(model_name=args.model, file_=file, dataset_dir=args.dataset_dir, batch_size=args.batch_size)
+        print(f'\n------ Starting generation for file {file} ------\n')
+        generate_samples(
+            model,
+            tokenizer,
+            device,
+            model_name=args.model,
+            file=file,
+            dataset_dir=args.dataset_dir,
+            batch_size=args.batch_size
+        )
 
     print(f'###### Sample generation for files in {args.dataset_dir} took {timedelta(seconds=time.time() - start)} ######')
