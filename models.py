@@ -12,7 +12,10 @@ model_info = {
     'qwen_ft': 'kulia-moon/Lily-Qwen1.5-0.5B',
     'bitnet': 'microsoft/bitnet-b1.58-2B-4T-bf16',
     'llama': 'meta-llama/Llama-3.2-1B-Instruct',
-    'stablelm': 'stabilityai/stablelm-3b-4e1t'
+    'stablelm': 'stabilityai/stablelm-3b-4e1t',
+    'rocket': 'pansophic/rocket-3B',  # fine-tuned stable lm
+    'nvidia': 'nvidia/NVIDIA-Nemotron-Nano-9B-v2-FP8',
+    'google': 'google/gemma-2-2b-it',
 }
 
 def load_model(model_name:str):
