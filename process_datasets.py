@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
         elif 'wmt16' in files:
             # wmt16 translation column is in JSON format, parquet preloads data in this column as a dict so can query it directly
-            df['document'] = df['translation'].apply(lambda row: ' '.join(row['en'].strip()))
+            df['document'] = df['translation'].apply(lambda row: ' '.join(row['en']))
             df['context'] = df.apply(
                 lambda row: f'Translate the following German text into English.\n'
                             f'German: {row['translation']['de'].strip()}\nTranslation: ',
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         elif 'squad' in files:
             # SQuAD answers column is in JSON format, parquet preloads data in this column as a dict so can query it directly
-            df['document'] = df['answers'].apply(lambda row: ' '.join(row['text']).strip())
+            df['document'] = df['answers'].apply(lambda row: ' '.join(row['text']))
             df['context'] = df.apply(
                 lambda row: f'Answer the question with support from the context. '
                            f'Question: {row['question'].strip()}\nContext: {row['context'].strip()}\nAnswer: ',
