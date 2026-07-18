@@ -15,77 +15,18 @@ from models import load_model
 # samples and produce equal numbers of positive samples by prompting the source model with the
 # first 30 tokens of the human-written text"
 
-
 generated_datasets_dir = 'Generated Datasets'
 
 
-def generate_samples_deprecated(
-    model_name: str, file_: str, dataset_dir: str, batch_size: int = 20
+def generate_samples(
+        model,
+        tokenizer,
+        device: str,
+        model_name: str,
+        file: str,
+        dataset_dir: str,
+        batch_size: int = 20
 ) -> None:
-    """
-    Adds positive examples of machine-generated content to the datasets for the pubmed dataset. Because pubmed is a
-    q and a dataset, we use the whole unedited question.
-
-    :param model_name: model
-    :param file_: file
-    :param dataset_dir: directory where file located
-    :param batch_size: batch size
-    :return: None
-    """
-
-    model, tokenizer, device = load_model(model_name)
-
-    # todo: edit this to handle the different types of datasets
-    data = pd.read_parquet(f"{dataset_dir}/{file_}")
-    # handled in process_datasets.py
-    # data['is_machine'] = 0
-    # data = data[['document', 'is_machine']]
-    passages = data["document"].to_list()
-
-    # pubmed dataset does not
-    tokens = tokenizer(passages, return_tensors="pt", truncation=True, padding=True).to(
-        device
-    )
-
-    outputs = []
-    total_epochs = len(data)
-    epoch = 0
-    for i in range(0, total_epochs, batch_size):
-        # extract the tokens for dataset rows according to batch size
-        input_ids = tokens["input_ids"][i : i + batch_size].to(device)
-        attention_mask = tokens["attention_mask"][i : i + batch_size].to(device)
-
-        passage_lengths = (
-            tokens["attention_mask"][i : i + batch_size].sum(dim=1).float()
-        )
-        max_tokens = int(
-            passage_lengths.quantile(0.75).item()
-        )  # set max tokens to be the third quantile of the current batch
-
-        batch_output_tokens = model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=max_tokens,
-            repetition_penalty=1.3,
-            no_repeat_ngram_size=4,
-            do_sample=True,
-            top_p=0.9,
-            temperature=0.9,
-        )
-
-        batch_outputs = tokenizer.batch_decode(
-            batch_output_tokens, skip_special_tokens=True
-        )
-        outputs.extend(batch_outputs)
-        torch.cuda.empty_cache()
-        epoch += 1
-
-        if epoch % 10 == 0:
-            print(
-                f"------ Finished epoch {epoch} of {total_epochs} for file {file_} ------"
-            )
-
-def generate_samples(model, tokenizer, device: str, model_name: str, file: str, dataset_dir: str, batch_size: int = 20) -> None:
     """
     Adds positive examples of machine-generated content to for the datasets using the first 30 tokens of
     each row for xsum or the question along with the context for the others.
@@ -103,17 +44,17 @@ def generate_samples(model, tokenizer, device: str, model_name: str, file: str, 
 
     :return: None
     """
-
+    
     data = pd.read_parquet(f'{dataset_dir}/{file}')
-    # handled in process_datasets.py
-    # data['is_machine'] = 0
-    # data = data[['document', 'is_machine']]
     
     if 'xsum' in file:
         passages = data['document'].to_list()
+        q_and_a_dataset = False
     else:
         passages = data['context'].to_list()
+        q_and_a_dataset = True
 
+    tokenizer.padding_side = "left"
     tokens = tokenizer(
         passages,
         return_tensors='pt',
@@ -150,12 +91,10 @@ def generate_samples(model, tokenizer, device: str, model_name: str, file: str, 
             input_ids = torch.stack(batch).to(device)
             # creates boolean tensor for if a token at index i is the pad token then converts to model.generate expected dtype
             attention_mask = (input_ids != tokenizer.pad_token_id).long().to(device)
-            q_and_a_dataset = False
 
         else:
             input_ids = tokens['input_ids'][i:i+batch_size].to(device)
             attention_mask = tokens['attention_mask'][i:i+batch_size].to(device)
-            q_and_a_dataset = True
 
         passage_lengths = (tokens['attention_mask'][i:i+batch_size].sum(dim=1).float())
         max_tokens = int(passage_lengths.quantile(0.75).item())  # set max tokens to be the third quantile of the current batch
