@@ -54,7 +54,12 @@ def generate_samples(
         passages = data['context'].to_list()
         q_and_a_dataset = True
 
-    tokenizer.padding_side = "left"
+    # supress warnings by adjusting settings correctly for model tokenization and generation
+    tokenizer.padding_side = 'left'
+    tokenizer.clean_up_tokenization_spaces = False
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     tokens = tokenizer(
         passages,
         return_tensors='pt',
