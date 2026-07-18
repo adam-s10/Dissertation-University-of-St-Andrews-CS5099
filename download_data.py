@@ -17,7 +17,6 @@ datasets = {
         'repo_id': 'rajpurkar/squad',
         'files': ['plain_text/train-00000-of-00001.parquet', 'plain_text/validation-00000-of-00001.parquet'],
     },
-    # !-------- not marked as safe so will wait on this one --------!
     'writingprompts': {  # https://huggingface.co/datasets/euclaise/writingprompts
         'repo_id': 'euclaise/writingprompts',
         'files': [
