@@ -88,37 +88,33 @@ models = {
             tokenizer_config_json
         ]
     },
-    'nvidia': {
-        'repo_id': 'nvidia/NVIDIA-Nemotron-Nano-9B-v2-FP8',
+    'nvidia_7b': {
+        'repo_id': 'nvidia/OpenReasoning-Nemotron-7B',
         'files': [
-config_json,
-            'configureation_momtron_h.py',
+            'added_tokens.json',
+            config_json,
             generation_config_json,
-            'hf_quant_config.json',
-            'model-00001-of-00010.saftensors',
-            'model-00002-of-00010.saftensors',
-            'model-00003-of-00010.saftensors',
-            'model-00004-of-00010.saftensors',
-            'model-00005-of-00010.saftensors',
-            'model-00006-of-00010.saftensors',
-            'model-00007-of-00010.saftensors',
-            'model-00008-of-00010.saftensors',
-            'model-00009-of-00010.saftensors',
-            'model-00010-of-00010.saftensors',
-            'model-00001-of-00010.json',
-            'model-00002-of-00010.json',
-            'model-00003-of-00010.json',
-            'model-00004-of-00010.json',
-            'model-00005-of-00010.json',
-            'model-00006-of-00010.json',
-            'model-00007-of-00010.json',
-            'model-00008-of-00010.json',
-            'model-00009-of-00010.json',
-            'model-00010-of-00010.json',
+            'genselect_hf.py',
+            'model-00001-of-00002.safetensors',
+            'model-00001-of-00002.safetensors',
             'model.safetensors.index.json',
-            'modeling_nemotron_h.py',
-            'nemotron_toolcall_parser_no_streaming.py',
-            'nemotron_toolcall_parser_streaming.py',
+            special_tokens_map_json,
+            tokenizer_json,
+            tokenizer_config_json,
+            'vocab.json',
+            'merges.txt'
+        ]
+    },
+    'nvidia_4b': {
+        'repo_id': 'nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1',
+        'files': [
+            config_json,
+            generation_config_json,
+            'llama_nemotron_nano_generic_tool_calling.jinja',
+            'llama_nemotron_nano_toolcall_parser.py',
+            'model-00001-of-00002.safetensors',
+            'model-00002-of-00002.safetensors',
+            'model.safetensors.index.json',
             special_tokens_map_json,
             tokenizer_json,
             tokenizer_config_json
@@ -127,13 +123,15 @@ config_json,
     'google': {
         'repo_id': 'google/gemma-2-2b-it',
         'files': [
-            'chat_template.jinja',
             config_json,
             generation_config_json,
-            model_safetensors,
-            'processor_config.json',
+            'model-00001-of-00002.safetensors',
+            'model-00002-of-00002.safetensors',
+            'model.safetensors.index.json',
+            special_tokens_map_json,
             tokenizer_json,
-            tokenizer_config_json
+            tokenizer_config_json,
+            'tokenizer.model'
         ]
     }
 }

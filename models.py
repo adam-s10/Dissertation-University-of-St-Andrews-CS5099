@@ -14,7 +14,8 @@ model_info = {
     'llama': 'meta-llama/Llama-3.2-1B-Instruct',
     'stablelm': 'stabilityai/stablelm-3b-4e1t',
     'rocket': 'pansophic/rocket-3B',  # fine-tuned stable lm
-    'nvidia': 'nvidia/NVIDIA-Nemotron-Nano-9B-v2-FP8',
+    'nvidia_7b': 'nvidia/OpenReasoning-Nemotron-7B',
+    'nvidia_4b': 'nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1',
     'google': 'google/gemma-2-2b-it',
 }
 
@@ -35,7 +36,7 @@ def load_model(model_name:str):
     model.eval()  # set model in evaluation mode
     model = model.to(device)  # run model on device
     tokenizer.padding_side = 'left'
-    if tokenizer.pad_token is None:  # todo: check if all models decoder only, if so leave this otherwise will need to dynamically switch
+    if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     return model, tokenizer, device
