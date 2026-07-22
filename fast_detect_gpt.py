@@ -1,20 +1,20 @@
-# imports
-import numpy as np
 import os
 import argparse
-from models import load_model
-import torch
-import pandas as pd
 from datetime import timedelta
 import time
 import sys
 
+import torch
+import pandas as pd
+import numpy as np
+
+from models import load_model
 
 def fast_detect_gpt(
         sample_model_name: str,
-        data:pd.DataFrame,
+        data: pd.DataFrame,
         score_model_name: str | None = None
-) -> (list[float] | tuple[list[float], list[int]]):
+) -> tuple[list[float], list[timedelta]]:
     
     sampling_model, sampling_tokenizer, device = load_model(sample_model_name)
 
@@ -24,15 +24,37 @@ def fast_detect_gpt(
     else:  # load the same models in white-box or as a choice
         scoring_model, scoring_tokenizer = sampling_model, sampling_tokenizer
 
-    curvature = []
-    
-    total_epochs = len(data)
-    epoch = 1
-    for i in range(total_epochs):
-        epoch_start = time.time()
-        print(f'------ Starting Epoch {epoch} of {total_epochs} ------')
-        passage = data['document'].iloc[i]
+    # set tokenizer settings
+    scoring_tokenizer.clean_up_tokenization_spaces = False
+    if scoring_tokenizer.pad_token is None:
+        scoring_tokenizer.pad_token = scoring_tokenizer.eos_token
+
+    sampling_tokenizer.clean_up_tokenization_spaces = False
+    if sampling_tokenizer.pad_token is None:
+        sampling_tokenizer.pad_token = sampling_tokenizer.eos_token
         
+
+    curvature = []
+    timings = []
+    failure_tups = []
+    num_failures = 0
+
+    total_rows = len(data)
+    row = 1
+    for i in range(total_rows):
+        row_start = time.time()
+        print(f'------ Starting row {row:04d} of {total_rows:04d} ------')
+        passage = data['document'].iloc[i]
+
+        if not passage or not passage.strip():
+            print(f'\n!----- Warning: an empty passage was detected at row {i}, skipping. -----!\n')
+            curvature.append(np.nan)
+            timings.append(np.nan)
+            failure_tups.append(([i, len(passage), 'empty passage']))
+            row += 1
+            num_failures += 1
+            continue
+
         # ------ Sample Passage ------
         # tokenized text and attention mask as 1 x n tensors where n is the sequence length and 1 represents the batch size
         sample_inputs = sampling_tokenizer(passage, return_tensors='pt').to(device)
@@ -66,7 +88,7 @@ def fast_detect_gpt(
         x_tilde_ids = torch.cat(tensors=[first_token, rest_of_tokens], dim=-1)  # concatenates the first token to sampled tokens producing 1 x n tensor
         x_tilde = sampling_tokenizer.decode(x_tilde_ids[0], skip_special_tokens=True)  # decodes token ids into words
         
-        
+
         # ------ Score Passage ------
         score_inputs = scoring_tokenizer(passage, return_tensors='pt').to(device)
         with torch.no_grad():
@@ -78,8 +100,18 @@ def fast_detect_gpt(
         # log probability distribution of each token appearing in scoring model. Size 1 x n-1 x m
         score_log_probs = torch.log_softmax(score_shifted_logits, dim=-1)
 
-        # returns the normalized probability distribution of each token appearing in sampling model. Size 1 x n-1 x m
-        sample_probs = torch.softmax(score_shifted_logits, dim=-1)
+        try:
+            # returns the normalized probability distribution of each token appearing in sampling model. Size 1 x n-1 x m
+            sample_probs = torch.softmax(score_shifted_logits, dim=-1)
+        except torch.OutOfMemoryError:
+            print(f'!----- OOM Error for index {row}, skipping -----!')
+            curvature.append(np.nan)
+            timings.append(np.nan)
+            failure_tups.append(([i, len(passage), 'OOM Error']))
+            row += 1
+            num_failures += 1
+            continue
+
 
         conditional_log_likelihood = (  # calculates the conditional probability of the scoring model observing each token in the input at each position
             score_log_probs
@@ -100,15 +132,18 @@ def fast_detect_gpt(
         print(f'Log P: {log_p:.4f}')
         print(f'Discrepancy: {d_proba:.4f}')
 
-        epoch_end = time.time()
-        print(f'------ Finished Epoch {epoch}. Took {timedelta(seconds=epoch_end - epoch_start)} ------')
-        print()
-        if epoch % 100 == 0:
-            print('------ Processed 100 rows, clearing KV Cache as precaution against OOM Error ------')
-            torch.cuda.empty_cache()
-        epoch += 1
+        row_end = time.time()
+        total_time_s = timedelta(seconds=row_end - row_start)
+        timings.append(total_time_s)
+        print(f'\n------ Finished row {row:04d}. Took {total_time_s} ------\n')
+        row += 1
 
-    return curvature
+    print('##########################################\n##########################################')
+    print(f'------ INFO: {num_failures} row(s) failed during run ------')
+    print('Failure index and length of passage that caused failure(s):')
+    for i in failure_tups:
+        print(i)
+    return curvature, timings
 
 
 if __name__ == '__main__':
@@ -116,7 +151,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Fast-DetectGPT')
     parser.add_argument('--sampling-model', type=str, required=True)
     parser.add_argument('--dataset', type=str , required=True)
-    parser.add_argument('--generation-model', type=str, required=True)
     parser.add_argument('--save-file', type=str, required=True)
     parser.add_argument('--scoring-model', type=str, default=None, required=False)
     parser.add_argument('--dataset-dir', type=str, default='Generated Datasets', required=False)
@@ -125,37 +159,47 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.scoring_model and (args.scoring_model == args.sampling_model):
-        input_ = ''
-        while input_ != 'y' or input_ != 'n':
-            input_ = input(
+        user_input = ''
+        while user_input != 'y' or user_input != 'n':
+            user_input = input(
                 f'Warning: you will load two of the same models as sample and score ({args.scoring_model}), '
                 f'this is a waste of compute. Passing just --sample-model would use the same models as both '
                 f'sample and score but only load the weights once. Would you like to proceed? [y/n]'
             ).lower()
-            if input_ == 'n':
+            if user_input == 'n':
                 sys.exit('------ Program terminated by user ------')
-            if input_ == 'y':
+            if user_input == 'y':
                 break
 
     dataset = pd.read_parquet(f'{args.dataset_dir}/{args.dataset}')
 
     fast_start = time.time()
     if not args.scoring_model:
-        fast_results = fast_detect_gpt(args.sampling_model, dataset)
+        fast_results, runtime = fast_detect_gpt(args.sampling_model, dataset)
     else:
-        fast_results = fast_detect_gpt(args.sampling_model, dataset, score_model_name=args.scoring_model)
+        fast_results, runtime = fast_detect_gpt(args.sampling_model, dataset, score_model_name=args.scoring_model)
 
     fast_end = time.time()
 
     print(f'###### Fast-DetectGPT took {timedelta(seconds=fast_end-fast_start)} ######')
 
+    # verify returns are of the same length to not introduce nans or shifting of results
+    assert len(fast_results) == len(dataset)
+    assert len(runtime) == len(dataset)
+
     results = pd.DataFrame({
-        'generating_model': args.generation_model,
         'sampling_model': args.sampling_model,
         'scoring_model': args.scoring_model if args.scoring_model else args.sampling_model,
-        'curvature': fast_results
+        'curvature': fast_results,
+        'total_run_time_seconds': runtime
     })
-    df = pd.concat([results, dataset['is_machine']], axis=1)
+    df = pd.concat(
+        [
+            results,
+            dataset[['is_machine', 'generation_model']]
+        ],
+        axis=1
+    )
 
     os.makedirs(args.save_dir, exist_ok=True)
     df.to_csv(f'{args.save_dir}/{args.save_file}', index=False)
