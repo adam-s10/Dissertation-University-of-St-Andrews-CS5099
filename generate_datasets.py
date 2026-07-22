@@ -87,7 +87,7 @@ def generate_samples(
 
     outputs = []
     epoch = 1
-
+    total_epochs = len(data) // batch_size
     for i in range(0, len(data), batch_size):
 
         if 'xsum' in file:
@@ -127,7 +127,7 @@ def generate_samples(
         outputs.extend(batch_outputs)
         torch.cuda.empty_cache()
 
-        print(f'------ Finished epoch {epoch} for file {file} ------')
+        print(f'    --- Finished epoch {epoch:04d} of {total_epochs:04d} ---  ')
         epoch += 1
 
     df = pd.DataFrame({
