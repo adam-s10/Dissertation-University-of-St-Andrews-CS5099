@@ -1,11 +1,9 @@
 import os
+import argparse
 
 import pandas as pd
 import numpy as np
-
 from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_score, recall_score
-
-import argparse
 
 
 def calculate_thresholds(data: pd.DataFrame) -> float:
@@ -18,7 +16,6 @@ def calculate_thresholds(data: pd.DataFrame) -> float:
     # print(machine_scores.isna().sum(), human_scores.isna().sum())
     labels = [0] * len(human_scores) + [1] * len(machine_scores)
     scores = pd.concat([human_scores, machine_scores])
-    # auroc = roc_auc_score(labels, scores)
     print(f'------ AUROC {roc_auc_score(labels, scores):.4f} ------')
 
     fpr, tpr, thresholds = roc_curve(labels, scores)
@@ -41,7 +38,7 @@ if __name__ == '__main__':
     df = pd.read_csv(f'{args.results_dir}/{args.file}')
     threshold = calculate_thresholds(df)
 
-    df['prediction'] = [0 if df['curvature'].iloc[i] < threshold else 1 for i in range(len(df))]
+    df['prediction'] = [1 if df['curvature'].iloc[i] < threshold else 0 for i in range(len(df))]  # todo: double check this had the intended effect
 
     y, y_pred = df['is_machine'], df['prediction']
 
