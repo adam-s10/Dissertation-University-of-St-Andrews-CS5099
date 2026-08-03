@@ -7,3 +7,6 @@ numpy
 accelerate
 scikit-learn
 python-dotenv
+matplotlib
+statsmodels
+scipy
