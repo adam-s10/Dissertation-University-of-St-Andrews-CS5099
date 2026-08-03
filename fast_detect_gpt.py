@@ -54,89 +54,94 @@ def fast_detect_gpt(
             row += 1
             num_failures += 1
             continue
-
-        # ------ Sample Passage ------
-        # tokenized text and attention mask as 1 x n tensors where n is the sequence length and 1 represents the batch size
-        sample_inputs = sampling_tokenizer(passage, return_tensors='pt').to(device)
-        with torch.no_grad():
-            outputs = sampling_model(**sample_inputs)
-            
-            # 1 x n x m tensor where 1 is the batch size, n is the sequence length, and m is the size of the vocabulary
-            logits = outputs.logits.float()  # convert to 32 bit precision
-        # todo: can talk about how bf16 resulted in underflow so needed to use 32 bit precision
-        sample_shifted_logits = logits[:, :-1, :]  # shift the tokens by 1 as we can't check predictions past token n-1
-        probs = torch.softmax(sample_shifted_logits, dim=-1)  # returns the normalized probability distribution of each token appearing. Size 1 x n-1 x m
-
-        sampled_token_ids = torch.multinomial(  # samples 1 token per position from the probability distribution
-            probs.squeeze(0),
-            num_samples=1,
-        ).squeeze(-1)  # returns tensor of length n-1
-
-        log_probs = torch.log_softmax(sample_shifted_logits, dim=-1)  # log probability distribution of each token appearing. Size 1 x n-1 x m
-
-        sampled_log_probs = (  # gathers the log probabilities of the tokens sampled
-            log_probs.squeeze(0)
-            .gather(dim=-1, index=sampled_token_ids.unsqueeze(-1))
-            .squeeze(-1)
-        )  # returns tensor of length n-1
-        log_p = sampled_log_probs.sum().item()  # sum of log probabilities
-
-        # this code block is not needed was just a visual during implementation
-        input_ids = sample_inputs['input_ids']
-        first_token = input_ids[:, :1]  # can't predict first token so just draw it from input
-        rest_of_tokens = sampled_token_ids.unsqueeze(0)  # 1 x n-1 tensor
-        x_tilde_ids = torch.cat(tensors=[first_token, rest_of_tokens], dim=-1)  # concatenates the first token to sampled tokens producing 1 x n tensor
-        x_tilde = sampling_tokenizer.decode(x_tilde_ids[0], skip_special_tokens=True)  # decodes token ids into words
         
-
-        # ------ Score Passage ------
-        score_inputs = scoring_tokenizer(passage, return_tensors='pt').to(device)
-        with torch.no_grad():
-            outputs = scoring_model(**score_inputs)
-            logits = outputs.logits.float()  # convert to 32 bit precision
-
-        score_shifted_logits = logits[:, :-1, :]
-
-        # log probability distribution of each token appearing in scoring model. Size 1 x n-1 x m
-        score_log_probs = torch.log_softmax(score_shifted_logits, dim=-1)
-
         try:
-            # returns the normalized probability distribution of each token appearing in sampling model. Size 1 x n-1 x m
-            sample_probs = torch.softmax(score_shifted_logits, dim=-1)
+            # ------ Sample Passage ------
+            # tokenized text and attention mask as 1 x n tensors where n is the sequence length and 1 represents the batch size
+            sample_inputs = sampling_tokenizer(passage, return_tensors='pt').to(device)
+            with torch.no_grad():
+                outputs = sampling_model(**sample_inputs)
+                
+                # 1 x n x m tensor where 1 is the batch size, n is the sequence length, and m is the size of the vocabulary
+                logits = outputs.logits.float()  # convert to 32 bit precision
+
+            sample_shifted_logits = logits[:, :-1, :]  # shift the tokens by 1 as we can't check predictions past token n-1
+            probs = torch.softmax(sample_shifted_logits, dim=-1)  # returns the normalized probability distribution of each token appearing. Size 1 x n-1 x m
+    
+            sampled_token_ids = torch.multinomial(  # samples 1 token per position from the probability distribution
+                probs.squeeze(0),
+                num_samples=1,
+            ).squeeze(-1)  # returns tensor of length n-1
+    
+            log_probs = torch.log_softmax(sample_shifted_logits, dim=-1)  # log probability distribution of each token appearing. Size 1 x n-1 x m
+    
+            sampled_log_probs = (  # gathers the log probabilities of the tokens sampled
+                log_probs.squeeze(0)
+                .gather(dim=-1, index=sampled_token_ids.unsqueeze(-1))
+                .squeeze(-1)
+            )  # returns tensor of length n-1
+            log_p = sampled_log_probs.sum().item()  # sum of log probabilities
+    
+            # this code block is not needed was just a visual during implementation
+            # input_ids = sample_inputs['input_ids']
+            # first_token = input_ids[:, :1]  # can't predict first token so just draw it from input
+            # rest_of_tokens = sampled_token_ids.unsqueeze(0)  # 1 x n-1 tensor
+            # x_tilde_ids = torch.cat(tensors=[first_token, rest_of_tokens], dim=-1)  # concatenates the first token to sampled tokens producing 1 x n tensor
+            # x_tilde = sampling_tokenizer.decode(x_tilde_ids[0], skip_special_tokens=True)  # decodes token ids into words
+            
+    
+            # ------ Score Passage ------
+            score_inputs = scoring_tokenizer(passage, return_tensors='pt').to(device)
+            with torch.no_grad():
+                outputs = scoring_model(**score_inputs)
+                logits = outputs.logits.float()  # convert to 32 bit precision
+    
+            score_shifted_logits = logits[:, :-1, :]
+    
+            # log probability distribution of each token appearing in scoring model. Size 1 x n-1 x m
+            score_log_probs = torch.log_softmax(score_shifted_logits, dim=-1)
+
+            if score_model_name:
+                # returns the normalized probability distribution of each token appearing in sampling model. Size 1 x n-1 x m
+                sample_probs = torch.softmax(score_shifted_logits, dim=-1)
+            else:
+                # if the model is both sample and score use the already calculated probabilities
+                sample_probs = probs
+    
+    
+            conditional_log_likelihood = (  # calculates the conditional probability of the scoring model observing each token in the input at each position
+                score_log_probs
+                .gather(dim=-1, index=score_inputs['input_ids'][:, 1:].unsqueeze(-1))
+                .squeeze(-1)
+            )  # returns a 1 x n-1 size tensor
+    
+            mu_tilde = (sample_probs * score_log_probs).sum(dim=-1)
+            sigma_tilde = torch.sqrt(
+                (sample_probs * torch.square(score_log_probs)).sum(dim=-1) - torch.square(mu_tilde)
+            )
+            
+            # ------ Calculate Discrepancy ------
+            discrepancy = ((conditional_log_likelihood.sum(dim=-1) - mu_tilde.sum(dim=-1)) / sigma_tilde.sum(dim=-1)).mean()
+            d_proba = discrepancy.item()
+            curvature.append(d_proba)
+    
+            print(f'Log P: {log_p:.4f}')
+            print(f'Discrepancy: {d_proba:.4f}')
+    
+            row_end = time.time()
+            total_time_s = timedelta(seconds=row_end - row_start)
+            timings.append(total_time_s)
+            print(f'\n------ Finished row {row:04d}. Took {total_time_s} ------\n')
+            row += 1
+
         except torch.OutOfMemoryError:
-            print(f'!----- OOM Error for index {row}, skipping -----!')
+            print(f"!----- OOM Error for index {row}, skipping -----!")
             curvature.append(np.nan)
             timings.append(np.nan)
-            failure_tups.append(([i, len(passage), 'OOM Error']))
+            failure_tups.append(([i, len(passage), "OOM Error"]))
             row += 1
             num_failures += 1
-            continue
-
-
-        conditional_log_likelihood = (  # calculates the conditional probability of the scoring model observing each token in the input at each position
-            score_log_probs
-            .gather(dim=-1, index=score_inputs['input_ids'][:, 1:].unsqueeze(-1))
-            .squeeze(-1)
-        )  # returns a 1 x n-1 size tensor
-
-        mu_tilde = (sample_probs * score_log_probs).sum(dim=-1)
-        sigma_tilde = torch.sqrt(
-            (sample_probs * torch.square(score_log_probs)).sum(dim=-1) - torch.square(mu_tilde)
-        )
-        
-        # ------ Calculate Discrepancy ------
-        discrepancy = ((conditional_log_likelihood.sum(dim=-1) - mu_tilde.sum(dim=-1)) / sigma_tilde.sum(dim=-1)).mean()
-        d_proba = discrepancy.item()
-        curvature.append(d_proba)
-
-        print(f'Log P: {log_p:.4f}')
-        print(f'Discrepancy: {d_proba:.4f}')
-
-        row_end = time.time()
-        total_time_s = timedelta(seconds=row_end - row_start)
-        timings.append(total_time_s)
-        print(f'\n------ Finished row {row:04d}. Took {total_time_s} ------\n')
-        row += 1
+            torch.cuda.empty_cache()
 
     print('##########################################\n##########################################')
     print(f'------ INFO: {num_failures} row(s) failed during run ------')
