@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 
 results_dir = 'Results Files'
@@ -23,6 +24,7 @@ def get_all_result_file_data() -> pd.DataFrame:
                 result_df['dataset'] = 'pubmedqa'
 
             result_df['test'] = 1 if 'test' in file else 0
+            result_df['is_human'] = np.where(result_df['is_machine'] == 1, 0, 1)
 
             dfs.append(result_df)
 
