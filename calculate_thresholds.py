@@ -8,18 +8,19 @@ from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_
 
 def calculate_thresholds(data: pd.DataFrame) -> float:
 
-    machine_scores = data.query('is_machine==1')['curvature']
-    human_scores = data.query('is_machine==0')['curvature']
-    # print(len(machine_scores), len(human_scores))
+    data['is_human'] = np.where(data['is_machine'] == 1, 0, 1)
+    machine_scores = data.query('is_human==0')['curvature']
+    human_scores = data.query('is_human==1')['curvature']
+
     print(f'------ Human scores: mean {np.mean(human_scores):.4f}, std {np.std(human_scores):.4f} ------')
     print(f'------ Machine scores: mean {np.mean(machine_scores):.4f}, std {np.std(machine_scores):.4f} ------')
-    # print(machine_scores.isna().sum(), human_scores.isna().sum())
+
     labels = [0] * len(human_scores) + [1] * len(machine_scores)
     scores = pd.concat([human_scores, machine_scores])
     print(f'------ AUROC {roc_auc_score(labels, scores):.4f} ------')
 
     fpr, tpr, thresholds = roc_curve(labels, scores)
-    best_idx = np.argmax(tpr - fpr)  # maximises separation
+    best_idx = np.argmax(tpr - fpr)  # maximizes separation
     best_threshold = thresholds[best_idx]
     print(f'------ Suggested threshold: {best_threshold} -------')
     return best_threshold
@@ -40,7 +41,7 @@ if __name__ == '__main__':
 
     df['prediction'] = [1 if df['curvature'].iloc[i] < threshold else 0 for i in range(len(df))]  # todo: double check this had the intended effect
 
-    y, y_pred = df['is_machine'], df['prediction']
+    y, y_pred = df['is_human'], df['prediction']
 
     print()
     print('------ Results with suggested threshold -------')
