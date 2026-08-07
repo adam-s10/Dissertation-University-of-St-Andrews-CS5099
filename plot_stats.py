@@ -51,7 +51,7 @@ def plot_curvature_stats() -> None:
     fig.supylabel(t='Frequency', fontsize='large', fontweight='bold')
     fig.legend(['Machine', 'Human'], loc='lower left', ncols=2)
     plt.tight_layout()
-    plt.savefig(fname='human_and_machine_curvatures')
+    plt.savefig(fname='human_and_machine_curvatures', dpi=300)
     plt.show()
 
 
@@ -115,7 +115,7 @@ def plot_curvature_stats_by_dataset() -> None:
     fig.supylabel(t='Frequency', fontsize='large', fontweight='bold')
     fig.legend(['Human', 'Machine'], loc='lower left', ncols=2)
     plt.tight_layout()
-    # plt.savefig(fname='human_and_machine_by_dataset_curvatures_different_scales')
+    plt.savefig(fname='human_and_machine_by_dataset_curvatures_different_scales', dpi=300)
     plt.show()
     # todo: change graphs scale to be one standard deviation
 
@@ -191,7 +191,7 @@ def plot_curvature_by_model() -> None:
     ]
     fig.legend(handles=handles, loc='lower left', ncols=3)
     plt.tight_layout()
-    plt.savefig('human_and_machine_curvatures_by_model')
+    plt.savefig('human_and_machine_curvatures_by_model', dpi=300)
     plt.show()
 
 
