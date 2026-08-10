@@ -1,156 +1,72 @@
 from get_all_data import get_all_result_file_data
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from matplotlib.patches import Patch
 from sklearn.metrics import roc_curve, auc
 
 results_dir = 'Results Files'
 
+MODELS = ['qwen', 'bitnet', 'stablelm']
+COLORS = ['red', 'green', 'blue']
+DATASET_ORDER = ['xsum', 'writingprompts', 'wmt16', 'squad', 'pubmedqa']
+DATASET_TITLES = ['Xsum', 'Writing Prompts', 'WMT16 DE-EN', 'SQuAD', 'PubMedQA']
 
-def plot_is_machine_time_stats() -> None:
-    no_nans = all_data.dropna(subset=['total_run_time_seconds'])
+# Global control of figures for figure generation consistency
 
-    no_nans['total_run_time_seconds'] = pd.to_timedelta(no_nans['total_run_time_seconds'])
-    no_nans['total_run_time_seconds'] = no_nans['total_run_time_seconds'].dt.microseconds
+# A4 default margin size
+FIG_WIDTH = 6.3
+FONT_SIZE = 9
 
-    machine = no_nans[no_nans['is_machine'] == 1]
-    human = no_nans[no_nans['is_machine'] == 0]
-
-    machine_runtime = machine['total_run_time_seconds']
-    human_runtime = human['total_run_time_seconds']
-
-    _, (ax_machine, ax_human) = plt.subplots(1, 2, figsize=(14, 6), sharey=True, sharex=True)
-
-    for df, ax, title in zip([machine_runtime, human_runtime], [ax_machine, ax_human], ['Machine', 'Human']):
-        df.hist(ax=ax, bins=20, edgecolor='black')
-        ax.set_title(f'Runtime for {title} Samples (μs)')
-
-    plt.tight_layout()
-    plt.show()
-
+mpl.rcParams.update({
+    'font.family': 'serif',
+    'font.size': FONT_SIZE,
+    'axes.titlesize': FONT_SIZE,
+    'axes.labelsize': FONT_SIZE,
+    'xtick.labelsize': FONT_SIZE,
+    'ytick.labelsize': FONT_SIZE,
+    'legend.fontsize': FONT_SIZE,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight',
+})
+FIG_HEIGHT = 2.5
+DEFAULT_HEX_COLORS = ['#ff7f0e', '#1f77b4']
 
 def plot_curvature_stats() -> None:
+    """
+    Saves plot of all curvature by class returned by all three detection models.
+    *Figure 6*
+    :return: None
+    """
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]
 
     machine_curvature = machine['curvature']
     human_curvature = human['curvature']
 
-    fig, (ax_machine, ax_human) = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
+    fig, (ax_machine, ax_human) = plt.subplots(1, 2, figsize=(FIG_WIDTH, FIG_HEIGHT), sharey=True)
 
     for df, ax, color in zip(
             [machine_curvature, human_curvature],
             [ax_machine, ax_human],
-            ['#ff7f0e', '#1f77b4']  # default hex values of matplot when plotting two histograms on the same axis
+            DEFAULT_HEX_COLORS
     ):
         df.hist(ax=ax, color= color, edgecolor='white', alpha=.4)
 
 
-    fig.supxlabel(t='Conditional Probability Curvature', fontsize='large', fontweight='bold')
-    fig.supylabel(t='Frequency', fontsize='large', fontweight='bold')
-    fig.legend(['Machine', 'Human'], loc='lower left', ncols=2)
+    fig.supxlabel(t='Conditional Probability Curvature', fontweight='bold')
+    fig.supylabel(t='Frequency', fontweight='bold')
+    fig.legend(['Machine', 'Human'], loc='lower left', ncols=1, frameon=False)
     plt.tight_layout()
-    plt.savefig(fname='human_and_machine_curvatures', dpi=300)
-    plt.show()
-
-
-def plot_curvature_stats_by_dataset() -> None:
-    machine = all_data[all_data['is_machine'] == 1]
-    human = all_data[all_data['is_machine'] == 0]
-
-    xsum_machine_curvature = machine[machine['dataset'] == 'xsum']['curvature']
-    wp_machine_curvature = machine[machine['dataset'] == 'writingprompts']['curvature']
-    wmt_machine_curvature = machine[machine['dataset'] == 'wmt16']['curvature']
-    squad_machine_curvatures = machine[machine['dataset'] == 'squad']['curvature']
-    pubmedqa_machine_curvatures = machine[machine['dataset'] == 'pubmedqa']['curvature']
-
-    xsum_human_curvature = human[human['dataset'] == 'xsum']['curvature']
-    wp_human_curvature = human[human['dataset'] == 'writingprompts']['curvature']
-    wmt_human_curvature = human[human['dataset'] == 'wmt16']['curvature']
-    squad_human_curvatures = human[human['dataset'] == 'squad']['curvature']
-    pubmedqa_human_curvatures = human[human['dataset'] == 'pubmedqa']['curvature']
-
-    fig, (ax_xsum, ax_wp, ax_wmt, ax_squad, ax_pubmedqa) = plt.subplots(1, 5, figsize=(14, 6), )
-
-    plot_zip = zip(
-        [
-            (xsum_machine_curvature, xsum_human_curvature),
-            (wp_machine_curvature, wp_human_curvature),
-            (wmt_machine_curvature, wmt_human_curvature),
-            (squad_machine_curvatures, squad_human_curvatures),
-            (pubmedqa_machine_curvatures, pubmedqa_human_curvatures)
-        ],
-        [
-            ax_xsum,
-            ax_wp,
-            ax_wmt,
-            ax_squad,
-            ax_pubmedqa
-        ],
-        [
-            'XSum',
-            'Writing Prompts',
-            'WMT16 DE-EN',
-            'SQuAD',
-            'PubMedQA'
-        ],
-        [
-            ('orange', 'blue'),
-            ('orange', 'blue'),
-            ('orange', 'blue'),
-            ('orange', 'blue'),
-            ('orange', 'blue')
-        ]
-    )
-    for df, ax, title, color in plot_zip:
-
-        machine_df, human_df = df
-        machine_color, human_color = None, None
-        human_df.hist(ax=ax, color=human_color, alpha=.4, edgecolor="white")
-        machine_df.hist(ax=ax, color=machine_color, alpha=.4, edgecolor='white')
-        ax.set_title(title, fontsize='medium', style='italic')
-
-    fig.supxlabel(t='Conditional Probability Curvature', fontsize='large', fontweight='bold')
-    fig.supylabel(t='Frequency', fontsize='large', fontweight='bold')
-    fig.legend(['Human', 'Machine'], loc='lower left', ncols=2)
-    plt.tight_layout()
-    plt.savefig(fname='human_and_machine_by_dataset_curvatures_different_scales', dpi=300)
-    plt.show()
-    # todo: change graphs scale to be one standard deviation
-
-def plot_curvature_iqr() -> None:
-    machine = all_data[all_data["is_machine"] == 1]
-    human = all_data[all_data["is_machine"] == 0]
-
-    machine_curvature = machine["curvature"]
-    human_curvature = human["curvature"]
-
-    machine_curvature_iqr = machine_curvature[
-        (machine_curvature >= machine_curvature.quantile(0.25))
-        & (machine_curvature <= machine_curvature.quantile(0.75))
-    ]
-
-    human_curvature_iqr = human_curvature[
-        (human_curvature >= human_curvature.quantile(0.25))
-        & (human_curvature <= human_curvature.quantile(0.75))
-    ]
-
-    _, (ax_machine, ax_human) = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
-
-    for df, ax, title in zip(
-        [machine_curvature_iqr, human_curvature_iqr],
-        [ax_machine, ax_human],
-        ["Machine", "Human"],
-    ):
-        df.hist(ax=ax, bins=20, edgecolor="black")
-        ax.set_title(f"Curvature for {title} (IQR)")
-
-    plt.tight_layout()
-    plt.show()
+    plt.savefig(fname='human_and_machine_curvatures')
 
 
 def plot_curvature_by_model() -> None:
+    """
+    Saves plot of all curvature split by class and further split by the three detection models.
+    *Figure 7*
+    :return: None
+    """
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]
 
@@ -166,7 +82,7 @@ def plot_curvature_by_model() -> None:
         (top_left, top_right),
         (middle_left, middle_right),
         (bottom_left, bottom_right)
-    ) = plt.subplots(3, 2, figsize=(14, 6), sharey=True)
+    ) = plt.subplots(3, 2, figsize=(FIG_WIDTH, FIG_HEIGHT * 3), sharey=True)
 
     plot_zip = zip(
         [qwen_machine, qwen_human, bitnet_machine, bitnet_human, stablelm_machine, stablelm_human],
@@ -178,52 +94,124 @@ def plot_curvature_by_model() -> None:
     for df, ax, title, color in plot_zip:
         df.hist(ax=ax, bins=20, color=color, edgecolor='white', alpha=.4)
         ax.set_title(f'Distribution of Curvatures using {title} Samples')
-        ax.set_title(title, fontsize='medium', style='italic')
-
-
-    fig.supxlabel(t='Conditional Probability Curvature', fontsize='large', fontweight='bold')
-    fig.supylabel(t='Frequency', fontsize='large', fontweight='bold')
+        ax.set_title(title, style='italic')
 
     handles = [
         Patch(color='red', edgecolor='white',   alpha=.4, label='Qwen'),
         Patch(color='green', edgecolor='white', alpha=.4, label='Bitnet'),
         Patch(color='blue', edgecolor='white',  alpha=.4, label='Stable LM'),
     ]
-    fig.legend(handles=handles, loc='lower left', ncols=3)
+    fig.legend(
+        handles=handles,
+        fontsize=FONT_SIZE,
+        ncols=3,
+        frameon=False,
+        loc='lower left'
+    )
+
+    fig.supxlabel(t='Conditional Probability Curvature', fontsize=FONT_SIZE, fontweight='bold', y=0.03)
+    fig.supylabel(t='Frequency', fontsize=FONT_SIZE, fontweight='bold')
     plt.tight_layout()
-    plt.savefig('human_and_machine_curvatures_by_model', dpi=300)
-    plt.show()
+    plt.savefig(fname='human_and_machine_curvature_by_model')
 
+def plot_squad_vs_wmt_curvatures() -> None:
+    """
+    Saves plot of all machine and human curvatures of all three detection models for WMT16 DE-EN and SQuAD datasets.
+    *Figure 8*
+    :return: None
+    """
+    machine = all_data[all_data['is_human'] == 0]
+    human = all_data[all_data['is_human'] == 1]
 
-def plot_auroc(y_true: list[tuple[int]], z_scores: list[tuple[float]], dataset: str) -> None:
-    _, axis = plt.subplots(1, 2, figsize=(14, 6), sharex=True, sharey=True)
-    models = ["Qwen", "Bitnet", "Stable LM"]
-    colors = ["red", "green", "blue"]
+    wmt_machine_curvature = machine[machine['dataset'] == 'wmt16']['curvature']
+    squad_machine_curvatures = machine[machine['dataset'] == 'squad']['curvature']
+    wmt_human_curvature = human[human['dataset'] == 'wmt16']['curvature']
+    squad_human_curvatures = human[human['dataset'] == 'squad']['curvature']
 
-    auc_zip = zip(y_true, z_scores, axis, ["Train", "Test"])
-    for true, score, ax, title in auc_zip:
-        for model_true, model_score, color, model in zip(
-            true, score, colors, models
-        ):
-            # for model_true, model_score, color in true, score, color:
-            fpr, tpr, _ = roc_curve(model_true, model_score)
-            roc_auc = auc(fpr, tpr)
-            ax.plot(
-                fpr, tpr, color=color, label=f"{model} (AUROC = {1 - roc_auc:.3f})"
-            )
-            ax.legend()
-        ax.set_xlabel("False Positive Rate (FPR)")
-        ax.set_ylabel("True Positive Rate (TPR)")
-        ax.set_title(f"ROC Curves for {dataset} {title}")
+    fig, (left, right) = plt.subplots(nrows=1, ncols=2, figsize=(FIG_WIDTH, FIG_HEIGHT), sharey=True)
+    plot_zip = zip(
+        [
+            (wmt_machine_curvature, wmt_human_curvature),
+            (squad_machine_curvatures, squad_human_curvatures)
+        ],
+        [left, right],
+        ['WMT16 DE-EN', 'SQuAD']
+    )
+
+    for (machine, human), ax, title in plot_zip:
+        machine.hist(ax=ax, color=DEFAULT_HEX_COLORS[0], alpha=.4, edgecolor='white')
+        human.hist(ax=ax, color=DEFAULT_HEX_COLORS[1], alpha=.4, edgecolor='white')
+        ax.set_title(title, style='italic')
+
+    fig.supylabel(t='Frequency', fontsize=FONT_SIZE, fontweight='bold')
+    fig.supxlabel(t='Conditional Probability Curvature', fontsize=FONT_SIZE, fontweight='bold')
+    fig.legend(['Machine', 'Human'], loc='lower left', fontsize=FONT_SIZE, ncols=1, frameon=False)
     plt.tight_layout()
-    plt.show()
+    plt.savefig(fname='wmt_vs_squad')
 
+
+def plot_auroc(generation_model: str) -> None:
+    """
+    Saves plot ROC curves with respective AUROC scores of all datasets generated by the passed model for all three of
+    the detection models.
+    *Section C*
+    :param generation_model: generation model to plot figure for
+    :return: None
+    """
+
+    df = all_data[all_data['generation_model'] == generation_model]
+    df = df.dropna(subset=['curvature'])  # sklearn AUROC will throw errors if nans exist
+    title_preamble = 'ROC Curves for'
+    fig, axes = plt.subplots(5, 2, figsize=(FIG_WIDTH, FIG_HEIGHT * 5), sharey=True, sharex=True)
+
+    for dataset, title, ax in zip(DATASET_ORDER, DATASET_TITLES, axes):
+        dataset_df = df[df['dataset'] == dataset]
+        print(dataset_df.shape)
+        for dataset_type, col_val, a, in zip(['Train', 'Test'], [0, 1], ax):
+            for model, color in zip(MODELS, COLORS):
+                plot_df = dataset_df[
+                    (dataset_df['sampling_model'] == model) &
+                    (dataset_df['test'] == col_val)
+                ]
+                model_true = plot_df['is_human']
+                model_score = plot_df['curvature']
+                fpr, tpr, _ = roc_curve(model_true, model_score)
+                roc_auc = auc(fpr, tpr)
+                a.plot(
+                    fpr, tpr, color=color, label=f'AUROC: {roc_auc:.3f}'
+                )
+                a.legend(loc='lower right', frameon=False)
+                a.set_title(f'{title_preamble} {title} {dataset_type}', style='italic')
+
+    handles = [
+        Patch(color='red', edgecolor='white', label='Qwen'),
+        Patch(color='green', edgecolor='white', label='Bitnet'),
+        Patch(color='blue', edgecolor='white', label='Stable LM'),
+    ]
+
+    fig.legend(
+        handles=handles,
+        fontsize=FONT_SIZE,
+        ncols=3,
+        frameon=False,
+        loc='lower left'
+    )
+    fig.supxlabel('False Positive Rate (FPR)', fontsize=FONT_SIZE, fontweight='bold', y=0.02)
+    fig.supylabel('True Positive Rate (TPR)', fontsize=FONT_SIZE, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(fname=f'{generation_model}_roc_curves')
 
 all_data = get_all_result_file_data()
-all_data['total_run_time_seconds'] = pd.to_timedelta(all_data['total_run_time_seconds'])
-all_data['total_run_time_seconds'] = all_data['total_run_time_seconds'].dt.microseconds
-plot_is_machine_time_stats()
+
 plot_curvature_stats()
-plot_curvature_iqr()
-plot_curvature_stats_by_dataset()
+
+plot_squad_vs_wmt_curvatures()
+
 plot_curvature_by_model()
+
+plot_auroc('qwen_ft')
+plot_auroc('llama')
+plot_auroc('google')
+plot_auroc('rocket')
+plot_auroc('nvidia_4b')
+plot_auroc('nvidia_7b')
