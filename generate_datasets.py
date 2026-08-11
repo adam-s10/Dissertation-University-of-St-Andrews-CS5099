@@ -146,13 +146,14 @@ def generate_samples(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Generator')
     parser.add_argument('--model', type=str, required=True)
-    parser.add_argument('--dataset-dir', type=str, default='Sampled Datasets',  required=False)
     parser.add_argument('--batch-size', type=int, default=20, required=False)
 
     args = parser.parse_args()
 
-    files = os.listdir(args.dataset_dir)
-    print(f'\n------ Found {', '.join(files)} in provided directory "{args.dataset_dir}" ------\n')
+    dataset_dir = 'Sampled Datasets'
+
+    files = os.listdir(dataset_dir)
+    print(f'\n------ Found {', '.join(files)} in provided directory "{dataset_dir}" ------\n')
 
     model, tokenizer, device = load_model(args.model)
     start = time.time()
@@ -164,8 +165,8 @@ if __name__ == '__main__':
             device,
             model_name=args.model,
             file=file,
-            dataset_dir=args.dataset_dir,
+            dataset_dir=dataset_dir,
             batch_size=args.batch_size
         )
 
-    print(f'###### Sample generation for files in {args.dataset_dir} took {timedelta(seconds=time.time() - start)} ######')
+    print(f'###### Sample generation for files in {dataset_dir} took {timedelta(seconds=time.time() - start)} ######')
