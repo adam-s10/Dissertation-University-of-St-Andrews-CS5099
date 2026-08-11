@@ -150,11 +150,11 @@ a script to run Fast-DetectGPT on the provided dataset, appending the sampling m
 Where: 
 - `<--sampling-model>` the sampling model to be used 
 - `<--dataset>` the name of the dataset to run the algorithm on
-- `<--save-file>` name of the results file 
+- `<--save-file>` name of the results file. Must be saved as a .csv or .parquet
 - `[--scoring-model]` the scoring model to be used. Defaults to `None` (same as the sampling model)
 - `[--save-dir]` the directory to save the results in. Defaults to `'Results Files'`
 
 Example usage:
 ```bash
-python fast_detect_gpt.py --sampling-model qwen --dataset google_test_pubmedqa_generated.parquet --save-file qwen_sampled_and_scored_on_google_test_pubmedqa_generated.parquet
+python fast_detect_gpt.py --sampling-model qwen --dataset google_test_pubmedqa_generated.parquet --save-file qwen_sampled_and_scored_on_google_test_pubmedqa_generated.csv
 ```
