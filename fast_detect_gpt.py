@@ -170,6 +170,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dataset_dir = 'Generated Datasets'
+    
+    if not args.save_file.endswith('.csv') or not args.save_file.endswith('.parquet'):
+        raise TypeError(
+            'Only .csv and .parquet file types are supported. Please rename the argument passed to --save-file '
+            'to reflect this'
+        )
 
     if args.scoring_model and (args.scoring_model == args.sampling_model):
         user_input = ''
@@ -215,4 +221,8 @@ if __name__ == '__main__':
     )
 
     os.makedirs(args.save_dir, exist_ok=True)
-    df.to_csv(f'{args.save_dir}/{args.save_file}', index=False)
+    if args.save_file.endswith('.csv'):
+        df.to_csv(f'{args.save_dir}/{args.save_file}', index=False)
+    else:
+        df.to_parquet(f'{args.save_dir}/{args.save_file}', index=False)
+        
