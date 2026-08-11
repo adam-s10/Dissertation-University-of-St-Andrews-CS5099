@@ -52,9 +52,5 @@ def download_data(download_location: str = 'Raw Datasets'):
             )
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Download data with Hugging Face cli.')
-    parser.add_argument('--download-dir', type=str, default='Raw Datasets', required=False)
 
-    args = parser.parse_args()
-
-    download_data(args.download_dir)
+    download_data()
