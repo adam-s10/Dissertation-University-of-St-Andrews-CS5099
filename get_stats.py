@@ -13,6 +13,11 @@ all_data = get_all_result_file_data()
 generated_directory = 'Generated Datasets'
 
 def get_curvature_stats_by_class() -> None:
+    """
+    Prints curvature statistics by class.
+    *Table 11*
+    :return: None
+    """
     machine = all_data[all_data['is_machine'] == 1]['curvature']
     human = all_data[all_data['is_machine'] == 0]['curvature']
 
@@ -33,6 +38,11 @@ def get_curvature_stats_by_class() -> None:
     
 
 def get_curvature_stats_by_dataset() -> None:
+    """
+    Prints curvature statistics by class further split by dataset.
+    *Table 13*
+    :return: None
+    """
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]
 
@@ -121,6 +131,11 @@ def get_curvature_stats_by_dataset() -> None:
 
 
 def get_curvature_stats_by_model() -> None:
+    """
+    Prints curvature statistics by class further split by the three detection models.
+    *Table 12*
+    :return: None
+    """
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]
 
@@ -179,6 +194,11 @@ def get_curvature_stats_by_model() -> None:
 
 
 def do_anova_test() -> tuple[float, float]:
+    """
+    Conducts a one-way ANOVA test to determine if there is statistical difference between machine and human curvature.
+    *Table 1*
+    :return: one-way ANOVA test result
+    """
 
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]['curvature']
@@ -187,12 +207,15 @@ def do_anova_test() -> tuple[float, float]:
     bitnet = machine[machine['sampling_model'] == 'bitnet']['curvature']
     stablelm = machine[machine['sampling_model'] == 'stablelm']['curvature']
 
-    # plt.boxplot([human.to_list(), qwen.to_list(), bitnet.to_list(), stablelm.to_list()], tick_labels=['Human', 'Qwen', 'Bitnet', 'Stable LM'])
-    # plt.show()
-
     return f_oneway(human, bitnet, qwen, stablelm, nan_policy='omit', equal_var=False)
 
 def do_anova_test_on_iqr() -> tuple[float, float]:
+    """
+    Conducts a one-way ANOVA test to determine if there is statistical difference between machine and human curvature 
+    on values that fall within the interquartile range (IQR).
+    *Table 1*
+    :return: one-way ANOVA test result
+    """
 
     machine = all_data[all_data['is_machine'] == 1]
     human = all_data[all_data['is_machine'] == 0]
@@ -214,11 +237,15 @@ def do_anova_test_on_iqr() -> tuple[float, float]:
     return f_oneway(human, bitnet, qwen, stablelm, nan_policy='omit', equal_var=False)
 
 
-def do_t_test() -> zip:
-
+def do_mann_whitney_u_test() -> zip:
+    """
+    Conducts Mann-Whitney U test to determine if there is statistical difference between the three detection models'
+    intra-model calculated machine and human curvature with Bonferroni correction applied.
+    *Table 2*
+    :return: zip of t statistics, p values, whether to reject the null hypothesis, corrected p-values, and cohens d
+    """
     df = all_data.dropna(subset=['curvature'])
     machine = df[df['is_machine'] == 1]
-    # human = df[df['is_machine'] == 0]['curvature']
 
     qwen = machine[machine['sampling_model'] == 'qwen']['curvature']
     bitnet = machine[machine['sampling_model'] == 'bitnet']['curvature']
@@ -243,9 +270,6 @@ def do_t_test() -> zip:
         (qwen_human, qwen),
         (bitnet_human, bitnet),
         (stablelm_human, stablelm),
-        # (qwen, bitnet),
-        # (qwen, stablelm),
-        # (bitnet, stablelm),
     ]
 
 
@@ -262,9 +286,6 @@ def do_t_test() -> zip:
     )
 
     cohens_d = []
-    def calculate_cohens_d(a, b):
-        return (a.mean() - b.mean()) / np.sqrt((a.std()**2 + b.std()**2) / 2)
-
     for a, b in df_pairs:
         cohens_d.append(calculate_cohens_d(a, b))
 
@@ -277,7 +298,24 @@ def do_t_test() -> zip:
     return zip(t_statistics, p_values, rejected, corrected_p, cohens_d)
 
 
+def calculate_cohens_d(a, b):
+    """
+    Calculates and returns Cohen's d of the two distributions passed.
+    :param a: distribution a
+    :param b: distribution b
+    :return: Cohen's d 
+    """
+    return (a.mean() - b.mean()) / np.sqrt((a.std()**2 + b.std()**2) / 2)
+
+
 def do_friedman_test() -> None:
+    """
+    Conducts and prints results of Friedman tests to determine if there is statistical difference between the three detection models'
+    intra-model calculated machine and human curvature with Bonferroni correction applied.
+    *Table 3*
+    :return: None
+    """
+
     df = all_data
 
     qwen_machine = df[
@@ -316,7 +354,13 @@ def do_friedman_test() -> None:
     print(friedmanchisquare(qwen_human, bitnet_human, stablelm_human, nan_policy='omit'))
 
 
-def do_wilcoxon_test() -> None:
+def do_wilcoxon_test_machine() -> None:
+    """
+    Conducts and prints results of Wilcoxon tests for inter-model machine curvature to determine statistical difference
+    with Bonferroni correction applied.
+    *Table 4*
+    :return: None
+    """
     df = all_data
 
     qwen_machine = df[
@@ -334,6 +378,48 @@ def do_wilcoxon_test() -> None:
         (df['sampling_model'] == 'stablelm')
     ]['curvature']
 
+    test_pairs = [
+        (qwen_machine, bitnet_machine),
+        (qwen_machine, stablelm_machine),
+        (stablelm_machine, bitnet_machine),
+    ]
+
+    titles = [
+        ('Machine', 'Qwen vs. Bitnet'),
+        ('Machine', 'Qwen vs. Stable LM'),
+        ('Machine', 'Stable LM vs. Bitnet'),
+    ]
+
+    stats = []
+    p_values = []
+    cohens_d = []
+    for model_a, model_b in test_pairs:
+        stat, p = wilcoxon(model_a, model_b, nan_policy='omit', alternative='two-sided')
+        cohens_d.append(calculate_cohens_d(model_a, model_b))
+        stats.append(stat)
+        p_values.append(p)
+
+
+    reject, p_adjusted, _, _ = multipletests(p_values, alpha=.05, method='bonferroni')
+    for t, p, r, corrected, cohen, (title_a, title_b) in zip(stats, p_values, reject, p_adjusted, cohens_d, titles):
+        print(f'Wilcoxon {title_a} Curvature Comparison {title_b}')
+        print(f'statistic: {t}')
+        print(f'p-value: {p}')
+        print(f'Reject null hypothesis: {r}')
+        print(f'Corrected p-values: {corrected}')
+        print(f'Cohen\'s d: {cohen}')
+        print()
+
+
+def do_wilcoxon_test_human() -> None:
+    """
+    Conducts and prints results of Wilcoxon tests for inter-model human curvature to determine statistical difference
+    with Bonferroni correction applied.
+    *Table 4*
+    :return: None
+    """
+    df = all_data
+
     qwen_human = df[
         (df['is_machine'] == 0) &
         (df['sampling_model'] == 'qwen')
@@ -350,18 +436,12 @@ def do_wilcoxon_test() -> None:
     ]['curvature']
 
     test_pairs = [
-        (qwen_machine, bitnet_machine),
-        (qwen_machine, stablelm_machine),
-        (stablelm_machine, bitnet_machine),
         (qwen_human, bitnet_human),
         (qwen_human, stablelm_human),
         (stablelm_human, bitnet_human)
     ]
 
     titles = [
-        ('Machine', 'Qwen vs. Bitnet'),
-        ('Machine', 'Qwen vs. Stable LM'),
-        ('Machine', 'Stable LM vs. Bitnet'),
         ('Human', 'Qwen vs. Bitnet'),
         ('Human', 'Qwen vs. Stable LM'),
         ('Human', 'Stable LM vs. Bitnet')
@@ -369,22 +449,30 @@ def do_wilcoxon_test() -> None:
 
     stats = []
     p_values = []
+    cohens_d = []
     for model_a, model_b in test_pairs:
         stat, p = wilcoxon(model_a, model_b, nan_policy='omit')
+        cohens_d.append(calculate_cohens_d(model_a, model_b))
         stats.append(stat)
         p_values.append(p)
 
 
     reject, p_adjusted, _, _ = multipletests(p_values, alpha=.05, method='bonferroni')
-    for t, p, r, corrected, (title_a, title_b) in zip(stats, p_values, reject, p_adjusted, titles):
+    for t, p, r, corrected, cohen, (title_a, title_b) in zip(stats, p_values, reject, p_adjusted, cohens_d, titles):
         print(f'Wilcoxon {title_a} Curvature Comparison {title_b}')
         print(f'statistic: {t}')
         print(f'p-value: {p}')
         print(f'Reject null hypothesis: {r}')
         print(f'Corrected p-values: {corrected}')
+        print(f'Cohen\'s d: {cohen}')
         print()
     
 def get_average_aurocs() -> None:
+    """
+    Groups average AUROC score by model and by dataset, printing the results.
+    *Table 5*
+    :return: None
+    """
     df = all_data.dropna(subset=['curvature'])
 
     def group_auroc_calculation(group):
@@ -398,6 +486,11 @@ def get_average_aurocs() -> None:
 
 
 def get_average_document_length_by_dataset(human: bool) -> None:
+    """
+    Prints the average sample length by document.
+    :param human: boolean to print human or machine stats
+    :return: None
+    """
 
     xsum = []
     wp = []
@@ -446,6 +539,12 @@ def get_average_document_length_by_dataset(human: bool) -> None:
 
 # calculate classification metrics
 def calculate_thresholds(human_scores: pd.Series, machine_scores: pd.Series) -> float:
+    """
+    Calculates best thresholds for later use in classification metrics.
+    :param human_scores: human curvature
+    :param machine_scores: machine curvature
+    :return: classification threshold
+    """
 
     print(f'------ Human scores: mean {np.mean(human_scores):.4f}, std {np.std(human_scores):.4f} ------')
     print(f'------ Machine scores: mean {np.mean(machine_scores):.4f}, std {np.std(machine_scores):.4f} ------')
@@ -461,7 +560,14 @@ def calculate_thresholds(human_scores: pd.Series, machine_scores: pd.Series) -> 
     return best_threshold
 
 
-def calculate_metrics(y_true, y_pred, y_score):
+def calculate_metrics(y_true, y_pred, y_score) -> dict:
+    """
+    Calculates classification metrics.
+    :param y_true: is_human labels
+    :param y_pred: predictions
+    :param y_score: curvature scores
+    :return: dictionary of metrics
+    """
     return {
         'accuracy': accuracy_score(y_true, y_pred),
         'precision': precision_score(y_true, y_pred, zero_division=0),
@@ -471,7 +577,13 @@ def calculate_metrics(y_true, y_pred, y_score):
     }
 
 
-def get_grouped_classification_metrics():
+def get_grouped_classification_metrics() -> None:
+    """
+    Prints classification metrics by model and dataset for both train and test.
+    *Table 6*
+    *Table 7*
+    :return: None
+    """
     train_results = []
     test_results = []
     df = all_data.dropna(subset=['curvature'])
@@ -512,15 +624,12 @@ def get_grouped_classification_metrics():
     test_by_model = test_results_df.groupby('model')[['accuracy', 'precision', 'recall', 'f1', 'auroc']].mean().round(3)
     test_by_dataset = test_results_df.groupby('dataset')[['accuracy', 'precision', 'recall', 'f1', 'auroc']].mean().round(3)
 
-    print()
-    print(train_by_model.to_string())
-    print(train_by_dataset.to_string())
-    print()
-    print(test_by_model.to_string())
-    print(test_by_dataset.to_string())
-    print('------------------')
-    print(train_results_df.groupby('model')['threshold'].mean())
-    print(test_results_df.groupby('dataset')['threshold'].mean())
+    print('Train')
+    print(train_by_model)
+    print(train_by_dataset)
+    print('Test')
+    print(test_by_model)
+    print(test_by_dataset)
 
 get_curvature_stats_by_class()
 print()
@@ -531,7 +640,7 @@ print()
 print(do_anova_test())
 print(do_anova_test_on_iqr())
 print()
-for t, p, reject, corrected, cohens in do_t_test():
+for t, p, reject, corrected, cohens in do_mann_whitney_u_test():
     print(f't-statistic: {t}')
     print(f'p-value: {p}')
     print(f'Reject null hypothesis: {reject}')
@@ -541,7 +650,9 @@ for t, p, reject, corrected, cohens in do_t_test():
 
 do_friedman_test()
 print()
-do_wilcoxon_test()
+do_wilcoxon_test_machine()
+print()
+do_wilcoxon_test_human()
 print()
 get_average_aurocs()
 print()
