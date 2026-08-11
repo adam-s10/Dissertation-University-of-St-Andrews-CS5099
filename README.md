@@ -37,6 +37,15 @@ Large Language Models have seen continuous integration in society, workplaces, a
 
 To replicate the results of this project from scratch, large datasets must be downloaded from Hugging Face. As part of the submission, all datasets from after the sampling steps have been provided.
 
+
+### Data
+- Sampled Datasets
+  - Sampled parquet files for each dataset after train-test split
+- Generated Datasets
+  - Collection of datasets after all six generation models were run to create positive samples of machine-generated text.
+- Results Files
+  - Files containing curvature returned by Fast-DetectGPT sorted by the generation models
+
 ### Models
 List of models used with their corresponding string representations and Hugging Face Repository IDs (HF).
 #### Generation Models
@@ -158,3 +167,15 @@ Example usage:
 ```bash
 python fast_detect_gpt.py --sampling-model qwen --dataset google_test_pubmedqa_generated.parquet --save-file qwen_sampled_and_scored_on_google_test_pubmedqa_generated.csv
 ```
+
+--- 
+
+---
+
+---
+
+### GitHub Repo
+
+_Note that in line with University Guidelines, the repo has been set to private. In the event you wish to view it, please email as760@st-andrews.ac.uk and I will give you access._
+
+GitHub: https://github.com/adam-s10/Dissertation-University-of-St-Andrews-CS5099
