@@ -10,6 +10,8 @@ if __name__ == '__main__':
 
     for files in os.listdir(dataset_dir):
         df = pd.read_parquet(f'{dataset_dir}/{files}')
+        
+        print(f'------ Running for file {files} -------')
 
         if 'xsum' in files:
             df = df[['document']]
@@ -61,4 +63,5 @@ if __name__ == '__main__':
             )
 
         df['is_machine'] = 0
+        print(f'------ Columns: {df.columns} -------')
         df.to_parquet(f'{dataset_dir}/{files}')
