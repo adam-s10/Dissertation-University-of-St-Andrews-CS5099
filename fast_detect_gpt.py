@@ -165,10 +165,11 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str , required=True)
     parser.add_argument('--save-file', type=str, required=True)
     parser.add_argument('--scoring-model', type=str, default=None, required=False)
-    parser.add_argument('--dataset-dir', type=str, default='Generated Datasets', required=False)
     parser.add_argument('--save-dir', type=str, default='Results Files', required=False)
 
     args = parser.parse_args()
+
+    dataset_dir = 'Generated Datasets'
 
     if args.scoring_model and (args.scoring_model == args.sampling_model):
         user_input = ''
@@ -183,7 +184,7 @@ if __name__ == '__main__':
             if user_input == 'y':
                 break
 
-    dataset = pd.read_parquet(f'{args.dataset_dir}/{args.dataset}')
+    dataset = pd.read_parquet(f'{dataset_dir}/{args.dataset}')
 
     fast_start = time.time()
     if not args.scoring_model:
