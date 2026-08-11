@@ -10,7 +10,17 @@ def get_all_result_file_data() -> pd.DataFrame:
         if not os.path.isdir(model_path):
             continue
         for file in os.listdir(model_path):
-            result_df = pd.read_csv(f'{model_path}/{file}')
+
+            path_and_file = f'{model_path}/{file}'
+            if file.endswith('.csv'):
+                result_df = pd.read_csv(path_and_file)
+            elif file.endswith('.parquet'):
+                result_df = pd.read_parquet(path_and_file)
+            else:
+                raise TypeError(
+                    f'Only .csv and .parquet files are supported. Remove {file} from directory or change it to the '
+                    f'allowed format.'
+                )
 
             if 'xsum' in file:
                 result_df['dataset'] = 'xsum'
