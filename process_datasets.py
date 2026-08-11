@@ -5,12 +5,8 @@ import pandas as pd
     
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Dataset Preprocessor')
-    parser.add_argument('--dataset-dir', type=str, default='Sampled Datasets', required=False)
-    
-    args = parser.parse_args()
 
-    dataset_dir = args.dataset_dir
+    dataset_dir = 'Sampled Datasets'
 
     for files in os.listdir(dataset_dir):
         df = pd.read_parquet(f'{dataset_dir}/{files}')
