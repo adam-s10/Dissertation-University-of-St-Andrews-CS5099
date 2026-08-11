@@ -15,6 +15,13 @@ def fast_detect_gpt(
         data: pd.DataFrame,
         score_model_name: str | None = None
 ) -> tuple[list[float], list[timedelta]]:
+    """
+    Fast-DetectGPT analytical solution replicated from Bao et al. Citation [1] in submitted dissertation.
+    :param sample_model_name: sampling model
+    :param data: data
+    :param score_model_name: scoring model
+    :return: curvatures and runtimes
+    """
     
     sampling_model, sampling_tokenizer, device = load_model(sample_model_name)
 
