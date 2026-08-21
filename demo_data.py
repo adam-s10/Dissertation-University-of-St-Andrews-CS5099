@@ -76,6 +76,60 @@ My companion smiled an enigmatical smile. “That’s just his little peculiarit
 """
 
 
+a_study_in_scarlet_generated = """
+In the year 1878 I took my degree of Doctor of Medicine of the University of London, and proceeded to Netley to go through the course prescribed for surgeons in the Army Medical Department. Like many young men of my age, I imagined a life of steady advancement, useful service, and perhaps a modest measure of distinction. Fate, however, had arranged a stranger education for me.
+
+A month after my arrival at Netley, I received a letter bearing no signature. Inside was a single sheet of paper upon which were written only these words:
+
+"If you wish to save a life, be at Blackstone Pier at midnight on the 14th."
+
+I ought to have dismissed it as a prank. Yet something in the firm, deliberate handwriting compelled my attention. On the appointed night I found myself standing upon the fog-shrouded pier, listening to the slow wash of the tide against the pilings.
+
+For nearly an hour nothing occurred.
+
+Then I heard footsteps.
+
+Out of the mist emerged an elderly gentleman carrying a lantern. His face was pale, and his eyes darted nervously over the dark water.
+
+"You came," he said.
+
+"I did. Whose life is in danger?"
+
+"My own," he replied.
+
+Before I could question him further, a shot rang out. The lantern shattered, plunging us into darkness.
+
+We threw ourselves to the boards. Another bullet struck the railing where the old man had been standing. I seized his arm and dragged him behind a stack of cargo crates.
+
+"Who is firing?" I whispered.
+
+"The man I trusted most."
+
+The answer puzzled me, but there was no time for inquiry. A third shot flashed from the fog. This time I glimpsed the attacker: a tall figure advancing steadily along the pier.
+
+The old gentleman reached into his coat and withdrew a small iron box.
+
+"This is why he wants me dead," he said. "Take it. If I fall, deliver it to the magistrate."
+
+Before I could protest, he pressed the box into my hands and sprang to his feet.
+
+"Run!"
+
+The stranger fired again. The old man staggered but remained upright long enough to grapple with his assailant. Their silhouettes vanished into the mist together.
+
+I ran for help.
+
+When constables arrived moments later, neither man could be found. Only the old gentleman's lantern lay upon the planks, and beside it, a trail of blood leading to the water's edge.
+
+The iron box remained in my possession. Inside were documents revealing a vast scheme of fraud that implicated several respected businessmen.
+
+The scandal filled newspapers for weeks. Arrests followed, fortunes collapsed, and justice was eventually served.
+
+Yet the fate of the old gentleman was never discovered.
+
+Many years have passed since that night. The documents changed the course of several lives, including my own. But whenever I think of Blackstone Pier, I still wonder whether my mysterious correspondent survived the struggle in the fog, or whether he knowingly sacrificed himself so that the truth might reach the light.
+"""
+
 ##########################################################################################
 
 # Title: "Just in Time"
@@ -191,6 +245,49 @@ Their mother could not suppose that Pollie could take to heart the chance words 
 "She needs Jesus," he said softly, as he rose and pushed back his chair, "and I am praying every day that she may find Him."
 """
 
+just_in_time_generated = """
+"POLLIE, why have you not cleared up those weeds?" asked Pollie's mother from the mill door. Pollie was sitting in the fork of the old apple-tree, with her head bending"
+
+over something she held carefully in her hands.
+
+At her mother's call she started, nearly dropping it.
+
+"Oh, Mother, I'll do it soon!" she answered.
+
+"You said that this morning," replied her mother. "Down you come at once."
+
+Pollie sighed and climbed from the tree. But before she reached the ground, she tucked a small bundle deep into a hollow among the branches.
+
+The weeds were quickly cleared, yet all afternoon Pollie's thoughts stayed with the bundle in the apple-tree. The moment her chores were finished, she hurried back.
+
+Inside the bundle was a tiny bird. Two days earlier, during a storm, it had fallen from a nest. Pollie had found it shivering beneath the tree and had been secretly caring for it ever since. She feared her mother would tell her that nature should be left alone.
+
+The little bird opened its beak as Pollie approached.
+
+"I've brought you some crumbs," she whispered.
+
+Just then a shadow swept across the grass. A larger bird landed on a nearby branch and began calling loudly.
+
+Pollie froze. The tiny bird answered with weak chirps.
+
+Again the larger bird called.
+
+"It's your mother!" Pollie cried.
+
+She watched in amazement as the larger bird hopped closer and closer until it reached the hollow. There it fed the little bird and settled beside it.
+
+For a long time Pollie sat quietly below, smiling up into the leaves.
+
+That evening she told her mother everything.
+
+Instead of scolding her, her mother laughed softly.
+
+"My dear Pollie," she said, "I wondered what secret kept you in that tree. You were kind to help the little creature, but perhaps its own mother needed a chance to find it."
+
+The next morning the hollow was empty. The young bird had flown away.
+
+Pollie felt a little sad, but when she looked across the orchard she saw two birds soaring together in the sunlight. Then she smiled, picked up her hoe, and went cheerfully to clear the weeds before her mother had to ask. 
+"""
 
 ##########################################################################################
 
@@ -208,3 +305,42 @@ Her sister, Miss Watson, a tolerable slim old maid, with goggles on, had just co
 Miss Watson she kept pecking at me, and it got tiresome and lonesome. By-and-by they fetched the niggers in and had prayers, and then everybody was off to bed. I went up to my room with a piece of candle, and put it on the table. Then I set down in a chair by the window and tried to think of something cheerful, but it warn’t no use. I felt so lonesome I most wished I was dead. The stars were shining, and the leaves rustled in the woods ever so mournful; and I heard an owl, away off, who-whooing about somebody that was dead, and a whippowill and a dog crying about somebody that was going to die; and the wind was trying to whisper something to me, and I couldn’t make out what it was, and so it made the cold shivers run over me. Then away out in the woods I heard that kind of a sound that a ghost makes when it wants to tell about something that’s on its mind and can’t make itself understood, and so can’t rest easy in its grave, and has to go about that way every night grieving. I got so down-hearted and scared I did wish I had some company. Pretty soon a spider went crawling up my shoulder, and I flipped it off and it lit in the candle; and before I could budge it was all shriveled up. I didn’t need anybody to tell me that that was an awful bad sign and would fetch me some bad luck, so I was scared and most shook the clothes off of me. I got up and turned around in my tracks three times and crossed my breast every time; and then I tied up a little lock of my hair with a thread to keep witches away. But I hadn’t no confidence. You do that when you’ve lost a horseshoe that you’ve found, instead of nailing it up over the door, but I hadn’t ever heard anybody say it was any way to keep off bad luck when you’d killed a spider.
 I set down again, a-shaking all over, and got out my pipe for a smoke; for the house was all as still as death now, and so the widow wouldn’t know. Well, after a long time I heard the clock away off in the town go boom—boom—boom—twelve licks; and all still again—stiller than ever. Pretty soon I heard a twig snap down in the dark amongst the trees—something was a stirring. I set still and listened. Directly I could just barely hear a “me-yow! me-yow!” down there. That was good! Says I, “me-yow! me-yow!” as soft as I could, and then I put out the light and scrambled out of the window on to the shed. Then I slipped down to the ground and crawled in among the trees, and, sure enough, there was Tom Sawyer waiting for me.
 """
+
+the_adventures_of_huckleberry_finn_generated = """
+"You don’t know about me without you have read a book by the name of The Adventures of Tom Sawyer; but that ain’t no matter. That book was made by"
+
+...a fellow who knew how to stretch a tale without breaking it, and I reckon that’s a useful talent to have.
+
+Anyhow, this story ain’t about Tom, not exactly. It’s about a brass compass I found one foggy morning down by the river.
+
+I was skipping stones when I seen a glint in the mud. At first I thought it was a coin, and I was already spending it in my head on pie and fishing hooks. But when I dug it out, it turned out to be a compass no bigger than my palm. The strange thing was that its needle didn’t point north.
+
+It pointed across the river.
+
+I turned around three times to make sure. The needle kept swinging back to the same place, aiming at a patch of woods where nobody much liked to go. Folks said it was full of snakes, ghosts, and mosquitoes, which seemed a powerful unfair combination.
+
+Naturally, I decided to go.
+
+The next afternoon I borrowed a little raft and crossed over. The compass tugged my attention deeper into the trees. After an hour of stumbling through vines and briars, I came to an old oak. Buried beneath its roots was an iron box.
+
+Now, I ain’t ashamed to admit my hands shook some.
+
+Inside the box was no gold. No jewels neither.
+
+There was only a stack of letters.
+
+They had been written many years before by a riverboat captain to his daughter. In every one he promised that, once he earned enough money, he would come home and stay. But the last letter was unfinished. The captain had never gotten the chance to send it.
+
+I sat there reading till sunset painted the woods orange.
+
+The compass lay beside me, its needle finally still.
+
+Then it came to me. Maybe it hadn’t been pointing to treasure at all. Maybe it was pointing to something that had been lost.
+
+The next week I carried the letters to an old woman in town whose family name matched the one on the envelopes. When she opened them, she cried and laughed at the same time, which is a puzzling thing to witness.
+
+She said the captain had been her grandfather.
+
+As for the compass, when I looked at it again, the needle pointed north like any ordinary compass ought to.
+
+I never found another magical thing after that. But every now and then, standing by the river, I think about how the greatest treasures ain’t always the ones you can spend. Some of them are just stories that finally find their way home."""
