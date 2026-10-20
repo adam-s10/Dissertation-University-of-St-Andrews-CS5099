@@ -167,15 +167,3 @@ Example usage:
 ```bash
 python fast_detect_gpt.py --sampling-model qwen --dataset google_test_pubmedqa_generated.parquet --save-file qwen_sampled_and_scored_on_google_test_pubmedqa_generated.csv
 ```
-
---- 
-
----
-
----
-
-### GitHub Repo
-
-_Note that in line with University Guidelines, the repo has been set to private. In the event you wish to view it, please email as760@st-andrews.ac.uk and I will give you access._
-
-GitHub: https://github.com/adam-s10/Dissertation-University-of-St-Andrews-CS5099
